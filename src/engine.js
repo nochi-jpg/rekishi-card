@@ -288,7 +288,7 @@
       S.over = { winner, stakes: S.stakes, wins };
     }
     // 天下取り宣言：3ターン目まで・1試合1回。宣言した側は撤退できない
-    const DECLARE_LAST = 3, RETREAT_LAST = 5;
+    const DECLARE_LAST = 3, RETREAT_LAST = 3;
     function canDeclare(p) { return !S.over && S.declaredBy < 0 && S.turn >= 1 && S.turn <= DECLARE_LAST; }
     function canRetreat(p) { return !S.over && S.declaredBy !== p && S.turn >= 1 && S.turn <= RETREAT_LAST; }
     function declare(p) { if (!canDeclare(p)) return false; S.declaredBy = p; S.stakes = 4; return true; }
@@ -354,9 +354,9 @@
       if (S.turn === 3 && lead >= 1 && gap <= -2 && g.rand() < 0.5) return 'declare';
       if (S.turn === 3 && g.rand() < 0.08) return 'declare';
     }
-    if (g.canRetreat(p) && S.turn >= 4 && lose >= 2 && lead === 0) {
-      if (S.declaredBy === 1 - p && gap >= 8) return 'retreat';
-      if (S.turn === 5 && gap >= 14) return 'retreat';
+    if (g.canRetreat(p) && S.turn === 3 && lose >= 2 && lead === 0) {
+      if (S.declaredBy === 1 - p && gap >= 6) return 'retreat';
+      if (gap >= 12) return 'retreat';
     }
     return null;
   }

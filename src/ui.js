@@ -229,7 +229,7 @@
     $('#ctrl').innerHTML = `<div class="orb${left <= 0 ? ' zero' : ''}"><b>${left}</b><small>エネルギー</small></div>
       <button class="btn gold b-end${!busy && !anyPlayable ? ' pulse' : ''}" data-act="end" ${busy ? 'disabled' : ''}>ターン終了</button>
       <button class="btn blue b-decl" data-act="declare" ${busy || !G.canDeclare(ME) ? 'disabled' : ''}>${G.S.declaredBy === ME ? '宣言中<span>★±4</span>' : `天下取り<span>${layout === 'land' ? '★±4・3ターンまで' : '★±4'}</span>`}</button>
-      <button class="btn red b-ret" data-act="retreat" ${busy || !G.canRetreat(ME) ? 'disabled' : ''}>撤退<span>${G.S.declaredBy === ME ? (layout === 'land' ? '宣言中はできない' : 'できない') : (layout === 'land' ? '★-1・5ターンまで' : '★-1')}</span></button>`;
+      <button class="btn red b-ret" data-act="retreat" ${busy || !G.canRetreat(ME) ? 'disabled' : ''}>撤退<span>${G.S.declaredBy === ME ? (layout === 'land' ? '宣言中はできない' : 'できない') : (layout === 'land' ? '★-1・3ターンまで' : '★-1')}</span></button>`;
   }
 
   function renderDetail() {
@@ -358,7 +358,7 @@
     // CPU（置き場所は伏せたまま、ターン終了で見せる）
     E.cpuPlan(G, OP);
     const dc = E.cpuDecide(G, OP);
-    if (dc === 'declare' && G.declare(OP)) { SE.play('shock'); await banner('天下取り宣言', '相手が勝負に出た！ 勝ち負けの★が±4に。撤退（★-1）は5ターン目まで', '', 1600); }
+    if (dc === 'declare' && G.declare(OP)) { SE.play('shock'); await banner('天下取り宣言', '相手が勝負に出た！ 勝ち負けの★が±4に。撤退（★-1）は3ターン目まで', '', 1600); }
     else if (dc === 'retreat') { G.retreat(OP); renderAll(); return showResult(); }
     busy = false; V.snap = G.snap(); renderAll();
   }
@@ -648,7 +648,7 @@
     ['カードを出す', '使えるエネルギーは<b>ターンの数</b>と同じ（3ターン目なら3）。<br>手札のカードを場所に<b>ドラッグ</b>するか、カードを選んでから場所を<b>クリック（タップ）</b>して置きます。<br>1つの場所に置けるのは<b>4枚まで</b>。置いたカードは、ターン終了まで手札にもどせます。'],
     ['公開とカードの効果', '「ターン終了」で、相手といっしょにカードを公開。<b>リードしているほう</b>が先に公開します。<br><b>公開時</b>：表になったとき1回発動　<b>永続</b>：場にいるあいだずっと<br><b>予言</b>：そのターン、相手も同じ場所に出していたら発動。相手の置き場所を読もう<br><b>史実コンボ</b>：歴史でつながる2枚が同じ場所にそろうと強くなる'],
     ['場所の効果', '場所にはそれぞれ効果があります。<br>カードの<b>タグ</b>（政治・外交・文化・宗教・戦い）が場所に合うとパワーアップ。<br>相手の時代の場所でも戦えるように、デッキを組み立てよう。'],
-    ['天下取り宣言と撤退', 'ふつうは勝つと<b>★+2</b>、負けると<b>★-2</b>。<br><b>天下取り宣言</b>（3ターン目まで・1試合1回）をすると<b>★±4</b>に。宣言した人は撤退できません。<br><b>撤退</b>（5ターン目まで）すれば<b>★-1</b>で終われます。<br>★を集めて段位を上げよう：足軽→武士→大名→天下人'],
+    ['天下取り宣言と撤退', 'ふつうは勝つと<b>★+2</b>、負けると<b>★-2</b>。<br><b>天下取り宣言</b>（3ターン目まで・1試合1回）をすると<b>★±4</b>に。宣言した人は撤退できません。<br><b>撤退</b>（3ターン目まで）すれば<b>★-1</b>で終われます。<br>★を集めて段位を上げよう：足軽→武士→大名→天下人'],
   ];
   function openHowto(i, fromMenu) {
     const pg = HOWTO[i];

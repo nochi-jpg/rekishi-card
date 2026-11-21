@@ -18,7 +18,7 @@
     const pick = (arr) => arr[Math.floor(R() * arr.length)];
     const shuffle = (arr) => { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
 
-    const S = { turn: 0, stakes: 1, declared: [false, false], over: null, seq: 0,
+    const S = { turn: 0, stakes: 2, declaredBy: -1, over: null, seq: 0,
       players: [], cards: {}, locs: [], board: [[[], []], [[], []], [[], []]], pending: [[], []] };
 
     // 山札
@@ -51,7 +51,7 @@
 
     function comboOn(uid) {
       const c = S.cards[uid], d = def(uid);
-      if (d.kind !== 'combo' || !c.revealed) return false;
+      if (d.kind !== 'combo' || !c.revealed || c.loc < 0) return false;
       return revealedAt(c.loc, c.owner).some(u => S.cards[u].id === d.partner);
     }
     function power(uid) {
@@ -91,7 +91,6 @@
       const ev = [];
       S.turn++;
       ev.push({ t: 'turn', turn: S.turn });
-      if (S.turn === TURNS) { S.stakes = Math.min(8, S.stakes * 2); ev.push({ t: 'stakes', stakes: S.stakes, by: -1 }); }
       if (S.turn <= 3) { S.locs[S.turn - 1].revealed = true; ev.push({ t: 'locReveal', li: S.turn - 1 }); }
       const n = S.turn === 1 ? 4 : 1; // 最初の手札3枚＋1ターン目の1枚
       for (let p = 0; p < 2; p++) for (let i = 0; i < n; i++) {
@@ -176,6 +175,25 @@
           } else out({ targets: [], text: tu ? '手札がいっぱい' : 'もう山札にない' });
           break;
         }
+        case 'debuffEnemyMax': {
+          const cand = revealedAt(li, 1 - p);
+          if (!cand.length) { out({ targets: [], text: '対象なし' }); break; }
+          const mx = Math.max(...cand.map(power));
+          const tu = pick(cand.filter(u => power(u) === mx)); S.cards[tu].bonus -= d.amount;
+          out({ targets: [tu], delta: -d.amount, text: def(tu).name + ' -' + d.amount });
+          break;
+        }
+        case 'destroyWeakest': {
+          const cand = revealedAt(li, 1 - p);
+          if (!cand.length) { out({ targets: [], text: '対象なし' }); break; }
+          const mn = Math.min(...cand.map(power));
+          const tu = pick(cand.filter(u => power(u) === mn));
+          const tc = S.cards[tu];
+          S.board[li][1 - p] = S.board[li][1 - p].filter(u => u !== tu);
+          tc.loc = -1; tc.gone = true;
+          ev.push({ t: 'destroy', uid, target: tu, li, snap: snap() });
+          break;
+        }
         case 'matchEnemyMax': {
           const es = revealedAt(li, 1 - p);
           const mx = es.length ? Math.max(...es.map(power)) : 0;
@@ -201,7 +219,7 @@
         }
         case 'prophecySelf': case 'prophecyEnemy':
           c.proph = { state: 'wait', turn: S.turn };
-          out({ targets: [], text: '予言：次のターン、この場所に相手が来る', proph: true });
+          out({ targets: [], text: '予言：相手もここに来ている…？', proph: true });
           break;
       }
     }
@@ -226,20 +244,23 @@
       const ev = [];
       const first = revealOrder()[0];
       ev.push({ t: 'revealStart', first });
+      const order = [];
       for (const p of [first, 1 - first]) {
         const list = S.pending[p].slice().sort((x, y) => S.cards[x].order - S.cards[y].order);
         for (const uid of list) {
+          if (S.cards[uid].gone) continue;
+          order.push(uid);
           S.cards[uid].revealed = true;
           ev.push({ t: 'reveal', p, uid, li: S.cards[uid].loc, snap: snap() });
           applyReveal(uid, ev);
           checkCombos(ev);
         }
       }
-      // 予言の判定（前のターンに置かれたもの）
-      for (const uid in S.cards) {
+      // 予言の判定（このターンに置かれたもの）
+      for (const uid of order) {
         const c = S.cards[uid], d = def(uid);
-        if (!c.proph || c.proph.state !== 'wait' || c.proph.turn !== S.turn - 1) continue;
-        const came = S.pending[1 - c.owner].filter(u => S.cards[u].loc === c.loc);
+        if (!c.proph || c.proph.state !== 'wait' || c.gone) continue;
+        const came = S.pending[1 - c.owner].filter(u => S.cards[u].loc === c.loc && !S.cards[u].gone);
         if (came.length) {
           c.proph.state = 'hit'; S.players[c.owner].hits++;
           if (d.fx === 'prophecySelf') c.bonus += d.amount;
@@ -250,14 +271,12 @@
           ev.push({ t: 'prophecy', uid, hit: false, targets: [], snap: snap() });
         }
       }
-      // 6ターン目に置いた予言は判定されない
-      if (S.turn === TURNS) for (const uid in S.cards) { const c = S.cards[uid]; if (c.proph && c.proph.state === 'wait') c.proph.state = 'none'; }
       S.pending = [[], []];
       if (S.turn >= TURNS) { finish(); ev.push({ t: 'end', result: S.over }); }
       return ev;
     }
     function finish(retreatBy) {
-      if (retreatBy !== undefined) { S.over = { winner: 1 - retreatBy, stakes: S.stakes, retreat: retreatBy, wins: [0, 0] }; return; }
+      if (retreatBy !== undefined) { S.over = { winner: 1 - retreatBy, stakes: 1, retreat: retreatBy, wins: [0, 0] }; return; }
       const wins = [0, 0];
       for (let li = 0; li < 3; li++) { const a = total(li, 0), b = total(li, 1); if (a > b) wins[0]++; else if (b > a) wins[1]++; }
       let winner = -1;
@@ -268,13 +287,14 @@
       }
       S.over = { winner, stakes: S.stakes, wins };
     }
-    function declare(p) {
-      if (S.over || S.declared[p] || S.stakes >= 8) return false;
-      S.declared[p] = true; S.stakes = Math.min(8, S.stakes * 2); return true;
-    }
-    function retreat(p) { if (S.over) return false; finish(p); return true; }
+    // 天下取り宣言：3ターン目まで・1試合1回。宣言した側は撤退できない
+    const DECLARE_LAST = 3, RETREAT_LAST = 5;
+    function canDeclare(p) { return !S.over && S.declaredBy < 0 && S.turn >= 1 && S.turn <= DECLARE_LAST; }
+    function canRetreat(p) { return !S.over && S.declaredBy !== p && S.turn >= 1 && S.turn <= RETREAT_LAST; }
+    function declare(p) { if (!canDeclare(p)) return false; S.declaredBy = p; S.stakes = 4; return true; }
+    function retreat(p) { if (!canRetreat(p)) return false; finish(p); return true; }
 
-    return { S, def, loc, power, total, snap, leads, cap, startTurn, endTurn, canPlay, play, unplay, energyLeft, declare, retreat, rand: R, TURNS };
+    return { S, def, loc, power, total, snap, leads, cap, startTurn, endTurn, canPlay, play, unplay, energyLeft, declare, retreat, canDeclare, canRetreat, rand: R, TURNS };
   }
 
   // ---------- CPU ----------
@@ -314,7 +334,7 @@
         if (gap > 12) w = 0.3; else if (gap < -8) w = 0.25; else if (Math.abs(gap) <= 4) w = 1.4;
         // まだ自分のカードがない場所にも広げる
         if (S.board[li][p].length === 0) w *= 1.35;
-        if (d.fx === 'debuffEnemyRandom' || d.fx === 'matchEnemyMax') w *= g.S.board[li][1 - p].length ? 1.3 : 0.5;
+        if (['debuffEnemyRandom', 'debuffEnemyMax', 'destroyWeakest', 'matchEnemyMax'].includes(d.fx)) w *= g.S.board[li][1 - p].length ? 1.3 : 0.5;
         if (d.kind === 'prophecy') v += S.board[li][1 - p].length < g.cap(li) ? 1.5 : -3;
         const score = v * w + g.rand();
         if (score > bestV) { bestV = score; bestLi = li; }
@@ -327,10 +347,16 @@
     const S = g.S;
     if (S.over) return null;
     const lead = g.leads(p), lose = g.leads(1 - p);
-    if (S.turn >= 4 && !S.declared[p] && lead >= 2 && lose === 0) return 'declare';
-    if (S.turn >= 5 && S.stakes >= 4 && lose >= 2 && lead === 0) {
-      const gap = [0, 1, 2].reduce((a, li) => a + g.total(li, 1 - p) - g.total(li, p), 0);
-      if (gap >= 18) return 'retreat';
+    const gap = [0, 1, 2].reduce((a, li) => a + g.total(li, 1 - p) - g.total(li, p), 0); // 相手がどれだけ上か
+    if (g.canDeclare(p) && S.turn >= 2) {
+      // 有利なら宣言。ときどき、はったりでも宣言する
+      if (lead >= 2 && gap <= -3) return 'declare';
+      if (S.turn === 3 && lead >= 1 && gap <= -2 && g.rand() < 0.5) return 'declare';
+      if (S.turn === 3 && g.rand() < 0.08) return 'declare';
+    }
+    if (g.canRetreat(p) && S.turn >= 4 && lose >= 2 && lead === 0) {
+      if (S.declaredBy === 1 - p && gap >= 8) return 'retreat';
+      if (S.turn === 5 && gap >= 14) return 'retreat';
     }
     return null;
   }

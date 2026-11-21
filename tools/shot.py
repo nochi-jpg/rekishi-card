@@ -19,6 +19,12 @@ CHECK = r'''() => {
     if ((cs.overflow === 'hidden' || cs.overflowX === 'hidden') && (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 2))
       bad.push('はみ出し: ' + el.className + ' 「' + el.textContent.trim().slice(0, 20) + '」 ' + el.scrollWidth + '/' + el.clientWidth + ' ' + el.scrollHeight + '/' + el.clientHeight);
   });
+  // ボタンの中の文字が折り返していないか
+  document.querySelectorAll('.screen.on .btn span, #modal.on .btn').forEach(el => {
+    if (!vis(el)) return; const lh = parseFloat(getComputedStyle(el).lineHeight) || parseFloat(getComputedStyle(el).fontSize) * 1.3;
+    if (el.tagName === 'SPAN' && el.getBoundingClientRect().height > lh * 1.6) bad.push('折り返し: ' + el.textContent);
+    if (el.scrollWidth > el.clientWidth + 1) bad.push('ボタンからはみ出し: ' + el.textContent.trim());
+  });
   // ボタン・カードが画面外に出ていないか
   document.querySelectorAll('.screen.on .btn, .screen.on .card, #modal.on .btn, .screen.on .tile, .screen.on .panel').forEach(el => {
     if (!vis(el)) return; const r = el.getBoundingClientRect();
@@ -49,6 +55,12 @@ async def main():
             pg.on('pageerror', lambda e: errs.append(str(e)))
             await pg.goto(URL); await pg.wait_for_timeout(900)
             await pg.screenshot(path=f'{OUT}/{name}_1title.png'); allbad[name+'_title'] = await pg.evaluate(CHECK)
+            await pg.evaluate("RC_UI.action('settings')"); await pg.wait_for_timeout(500)
+            await pg.screenshot(path=f'{OUT}/{name}_1settings.png'); allbad[name+'_settings'] = await pg.evaluate(CHECK)
+            await pg.evaluate("RC_UI.action('closeModal')")
+            await pg.evaluate("RC_UI.action('howto')"); await pg.wait_for_timeout(500)
+            await pg.screenshot(path=f'{OUT}/{name}_1howto0.png'); allbad[name+'_howto0'] = await pg.evaluate(CHECK)
+            await pg.evaluate("RC_UI.action('closeModal')")
             await pg.evaluate("RC_UI.action('toDeck')"); await pg.wait_for_timeout(600)
             await pg.screenshot(path=f'{OUT}/{name}_2deck.png'); allbad[name+'_deck'] = await pg.evaluate(CHECK)
             await pg.evaluate("RC_UI.newGame('himiko')")

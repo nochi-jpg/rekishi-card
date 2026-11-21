@@ -39,6 +39,13 @@
     },
   };
 
+  // ---------- 段位 ----------
+  const RANKS = [[0, '足軽'], [10, '武士'], [30, '大名'], [60, '天下人']];
+  function rankOf(st) { let r = RANKS[0]; RANKS.forEach(x => { if (st >= x[0]) r = x; }); return r; }
+  function rankIdx(st) { let k = 0; RANKS.forEach((x, i) => { if (st >= x[0]) k = i; }); return k; }
+  let showLabels = store.get('labels', true);
+  function applyLabels() { stage.classList.toggle('lbl', showLabels); }
+
   // ---------- 画面サイズ ----------
   let layout = 'land', scale = 1;
   function fitStage() {
@@ -48,7 +55,7 @@
     scale = Math.min(w / W, h / H);
     stage.style.width = W + 'px'; stage.style.height = H + 'px';
     stage.style.transform = `translate(${(w - W * scale) / 2}px, ${(h - H * scale) / 2}px) scale(${scale})`;
-    if (nl !== layout) { layout = nl; stage.className = layout; if (G) renderAll(); fitAll(); if ($('#modal').classList.contains('on') && modalRedraw) modalRedraw(); }
+    if (nl !== layout) { layout = nl; stage.className = layout; applyLabels(); if (G) renderAll(); fitAll(); if ($('#modal').classList.contains('on') && modalRedraw) modalRedraw(); }
   }
   function rectS(el) {
     const r = el.getBoundingClientRect(), s = stage.getBoundingClientRect();
@@ -96,7 +103,10 @@
   })();
 
   // ---------- 画面切りかえ ----------
-  function show(id) { $$('.screen').forEach(s => s.classList.toggle('on', s.id === id)); fitAll(); }
+  function show(id) {
+    if (id === 'title') { const st = store.get('stars', 0); $('#titleRank').innerHTML = `段位 <b>${rankOf(st)[1]}</b>　通算 ★${st}`; }
+    $$('.screen').forEach(s => s.classList.toggle('on', s.id === id)); fitAll();
+  }
 
   // ---------- 状態 ----------
   let G = null, V = null, sel = null, busy = true, myDeck = 'himiko', cpuDeck = 'taishi', log = null;
@@ -125,8 +135,7 @@
     const p = pw(uid), base = d.power;
     const pc = p > base ? ' up' : p < base ? ' down' : '';
     if (mode === 'hand') {
-      el.innerHTML = `<div class="art${isFace(d) ? ' face' : ''}" style="background-image:url('${imgUrl(d)}')"></div><div class="frame"></div>
-        <div class="cost">${d.cost}</div><div class="pow${pc}">${p}</div><div class="nm fit">${d.name}</div><div class="kw kw-${d.kind}">${KW[d.kind]}</div>`;
+      el.innerHTML = handInner(d, p, pc);
     } else {
       el.innerHTML = `<div class="art${isFace(d) ? ' face' : ''}" style="background-image:url('${imgUrl(d)}')"></div><div class="frame"></div>
         <div class="cost">${d.cost}</div><div class="pow${pc}">${p}</div><div class="bnm">${d.name}</div>`;
@@ -139,14 +148,19 @@
     return el;
   }
 
+  function handInner(d, p, pc) {
+    return `<div class="art${isFace(d) ? ' face' : ''}" style="background-image:url('${imgUrl(d)}')"></div><div class="frame"></div>
+        <div class="cost">${d.cost}</div><div class="pow${pc || ''}">${p}</div><div class="lb lb-c">コスト</div><div class="lb lb-p">パワー</div>
+        <div class="nm fit">${d.name}</div><div class="kw kw-${d.kind}">${KW[d.kind]}</div>`;
+  }
   function renderTop() {
     const od = DECKS[cpuDeck];
     const handN = G.S.players[OP].hand.filter(u => !V.hide.has(u)).length;
     $('#oppBar').innerHTML = `<div class="face" style="background-image:url('img/face/${od.face}.webp')"></div>
       <div><div class="oname">${od.name}デッキ</div>${layout === 'land' ? `<div class="otheme">${od.theme}・${od.desc}（CPU）</div>` : ''}</div>
-      ${G.S.declared[OP] ? '<div class="tagbadge decl">宣言</div>' : ''}
+      ${G.S.declaredBy === OP ? '<div class="tagbadge decl">天下取り宣言</div>' : ''}
       <div class="ohand">${layout === 'land' ? '手札' : ''}<b>${handN}</b></div>`;
-    $('#turnBox').innerHTML = `<div class="tn">ターン ${Math.max(1, G.S.turn)}<small> / 6</small></div><div class="stk">★${G.S.stakes}</div>
+    $('#turnBox').innerHTML = `<div class="tn">ターン ${Math.max(1, G.S.turn)}<small> / 6</small></div><div class="stk">★±${G.S.stakes}</div>
       <button class="menu" data-act="menu" aria-label="メニュー"><i></i><i></i><i></i></button>`;
   }
 
@@ -162,6 +176,7 @@
         const slots = document.createElement('div'); slots.className = 'slots';
         let list = G.S.board[li][p];
         if (p === OP && !V.oppShown) list = list.filter(u => !G.S.pending[OP].includes(u));
+        if (V.goneShow && V.goneShow.size) { list = list.slice(); V.goneShow.forEach((gl, gu) => { if (gl === li && G.S.cards[gu].owner === p) list.push(gu); }); }
         for (let i = 0; i < 4; i++) {
           const sl = document.createElement('div'); sl.className = 'slot' + (i >= cap ? ' closed' : '');
           slots.appendChild(sl);
@@ -213,8 +228,8 @@
     const anyPlayable = !busy && G.S.players[ME].hand.some(u => CARDS[G.S.cards[u].id].cost <= left && [0, 1, 2].some(li => G.canPlay(ME, u, li)));
     $('#ctrl').innerHTML = `<div class="orb${left <= 0 ? ' zero' : ''}"><b>${left}</b><small>エネルギー</small></div>
       <button class="btn gold b-end${!busy && !anyPlayable ? ' pulse' : ''}" data-act="end" ${busy ? 'disabled' : ''}>ターン終了</button>
-      <button class="btn blue b-decl" data-act="declare" ${busy || G.S.declared[ME] || G.S.stakes >= 8 ? 'disabled' : ''}>天下取り<span>宣言 ★×2</span></button>
-      <button class="btn red b-ret" data-act="retreat" ${busy ? 'disabled' : ''}>撤退<span>★${G.S.stakes}で終わる</span></button>`;
+      <button class="btn blue b-decl" data-act="declare" ${busy || !G.canDeclare(ME) ? 'disabled' : ''}>${G.S.declaredBy === ME ? '宣言中<span>★±4</span>' : `天下取り<span>${layout === 'land' ? '★±4・3ターンまで' : '★±4'}</span>`}</button>
+      <button class="btn red b-ret" data-act="retreat" ${busy || !G.canRetreat(ME) ? 'disabled' : ''}>撤退<span>${G.S.declaredBy === ME ? (layout === 'land' ? '宣言中はできない' : 'できない') : (layout === 'land' ? '★-1・5ターンまで' : '★-1')}</span></button>`;
   }
 
   function renderDetail() {
@@ -328,7 +343,6 @@
     V.snap = G.snap(); renderAll();
     for (const e of ev) {
       if (e.t === 'turn') { SE.whoosh(); await banner('ターン ' + e.turn, e.turn === 6 ? '最終ターン' : 'エネルギー ' + e.turn, '', 750); }
-      else if (e.t === 'stakes') { SE.play('good'); await banner('★×2', '最終ターンで賭けが2倍！（★' + e.stakes + '）', '', 900); renderTop(); }
       else if (e.t === 'locReveal') {
         V.locShown[e.li] = true; renderBoard();
         const tile = $(`#board .loc[data-li="${e.li}"] .tile`); tile.classList.add('flipin'); SE.whoosh(true); SE.play('decide');
@@ -344,7 +358,7 @@
     // CPU（置き場所は伏せたまま、ターン終了で見せる）
     E.cpuPlan(G, OP);
     const dc = E.cpuDecide(G, OP);
-    if (dc === 'declare' && G.declare(OP)) { SE.play('shock'); await banner('天下取り宣言', '相手が勝負に出た！ 賭けが2倍（★' + G.S.stakes + '）', '', 1200); }
+    if (dc === 'declare' && G.declare(OP)) { SE.play('shock'); await banner('天下取り宣言', '相手が勝負に出た！ 勝ち負けの★が±4に。撤退（★-1）は5ターン目まで', '', 1600); }
     else if (dc === 'retreat') { G.retreat(OP); renderAll(); return showResult(); }
     busy = false; V.snap = G.snap(); renderAll();
   }
@@ -364,6 +378,7 @@
     const prophWait = new Set(Object.keys(G.S.cards).filter(u => G.S.cards[u].proph && G.S.cards[u].proph.state === 'wait'));
     const comboBefore = new Set(Object.keys(G.S.cards).filter(u => G.S.cards[u].comboShown));
     const ev = G.endTurn();
+    V.goneShow = new Map(ev.filter(e => e.t === 'destroy').map(e => [e.target, e.li]));
     V.resolving = true; V.rev = prevRev; V.prophPending = prophWait; V.comboDone = comboBefore;
     G.S.players[ME].hand.forEach(u => { if (!handBefore.has(u)) V.hide.add(u); });
     G.S.players[OP].hand.forEach(u => { if (!handBefore.has(u)) V.hide.add(u); });
@@ -394,6 +409,15 @@
           if (src && !e.targets.includes(e.uid)) { const c = centerOf(src); floatText(c.x, c.y - 40, e.text, 'info'); }
         }
         await sleep(e.targets.length ? 750 : 600);
+      } else if (e.t === 'destroy') {
+        const src = cardNode(e.uid), el = cardNode(e.target);
+        if (src) { const c = centerOf(src); floatText(c.x, c.y - 30, '退場させる', 'info'); }
+        await sleep(350);
+        if (el) { const c = centerOf(el); el.classList.add('shatter'); sparks(c.x, c.y, 18); ring(c.x, c.y, 'red'); floatText(c.x, c.y, '退場', 'minus'); }
+        SE.play('hit'); SE.whoosh();
+        await sleep(600);
+        V.goneShow.delete(e.target); V.snap = e.snap; renderBoardCounting();
+        await sleep(250);
       } else if (e.t === 'fetch') {
         V.hide.delete(e.uid); renderTop(); renderHand(e.p === ME ? [e.uid] : null);
         const src = cardNode(e.from);
@@ -416,7 +440,7 @@
         await sleep(950);
       }
     }
-    V.resolving = false; V.oppShown = false; V.hide.clear();
+    V.resolving = false; V.oppShown = false; V.hide.clear(); V.goneShow = new Map();
     V.snap = G.snap(); renderAll();
     if (G.S.over) { await sleep(400); return showResult(); }
     await sleep(250);
@@ -558,13 +582,13 @@
       case 'toTitle': SE.play('tap'); closeModal(); G = null; show('title'); break;
       case 'pickDeck': SE.play('decide'); newGame(el.dataset.deck); break;
       case 'howto': SE.play('tap'); openHowto(0); break;
-      case 'sound': SE.on = !SE.on; store.set('sound', SE.on); $('#soundBtn').textContent = '音：' + (SE.on ? 'オン' : 'オフ'); SE.play('tap'); break;
+      case 'settings': SE.play('tap'); openSettings(false); break;
       case 'end': endTurn(); break;
       case 'unplay': if (sel) doUnplay(sel); break;
       case 'declare':
-        if (!busy && G.declare(ME)) { SE.play('cheer'); renderAll(); banner('天下取り宣言', '勝てば★' + G.S.stakes + '！', '', 1000); }
+        if (!busy && G.canDeclare(ME)) openConfirm('天下取り宣言しますか？', '勝てば<b>★+4</b>、負ければ<b>★-4</b>になります。<br>宣言すると、この試合ではもう撤退できません。', '宣言する', () => { G.declare(ME); SE.play('cheer'); renderAll(); banner('天下取り宣言', '勝てば★+4！ もう逃げない', '', 1100); }, 'blue');
         break;
-      case 'retreat': openConfirm('撤退しますか？', `いまの賭け（★${G.S.stakes}）だけ負けて、この試合を終わります。`, '撤退する', () => { G.retreat(ME); SE.play('ko'); renderAll(); showResult(); }); break;
+      case 'retreat': if (!busy && G.canRetreat(ME)) openConfirm('撤退しますか？', '<b>★-1</b>だけ負けて、この試合を終わります。<br>（ふつうに負けると★-2、宣言されて負けると★-4）', '撤退する', () => { G.retreat(ME); SE.play('ko'); renderAll(); showResult(); }); break;
       case 'menu': openMenu(); break;
       case 'closeModal': SE.play('tap'); closeModal(); break;
       case 'again': SE.play('decide'); closeModal(); newGame(myDeck); break;
@@ -584,9 +608,9 @@
   // ---------- モーダル ----------
   function openModal(html, redraw) { const M = $('#modal'); M.innerHTML = `<div class="shade"></div><div class="box panel">${html}</div>`; M.classList.add('on'); modalRedraw = redraw || null; fitAll(M); }
   function closeModal() { const M = $('#modal'); M.classList.remove('on'); M.innerHTML = ''; modalRedraw = null; }
-  function openConfirm(title, body, okLabel, onOk) {
+  function openConfirm(title, body, okLabel, onOk, color) {
     openModal(`<div class="mtitle">${title}</div><div class="mbody fitb" style="text-align:center">${body}</div>
-      <div class="mbtns"><button class="btn" data-act="closeModal">やめる</button><button class="btn red" id="mOk">${okLabel}</button></div>`);
+      <div class="mbtns"><button class="btn" data-act="closeModal">やめる</button><button class="btn ${color || 'red'}" id="mOk">${okLabel}</button></div>`);
     $('#mOk').onclick = () => { closeModal(); onOk(); };
   }
   function openMenu() {
@@ -594,24 +618,41 @@
     openModal(`<div class="mtitle">メニュー</div>
       <div class="mbody" style="display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center">
         <button class="btn" style="width:300px" id="mHow">あそびかた</button>
-        <button class="btn" style="width:300px" id="mSnd">音：${SE.on ? 'オン' : 'オフ'}</button>
+        <button class="btn" style="width:300px" id="mSet">設定</button>
         <button class="btn red" style="width:300px" id="mTitle">タイトルにもどる</button>
       </div>
       <div class="mbtns"><button class="btn gold" data-act="closeModal">つづける</button></div>`, openMenu);
     $('#mHow').onclick = () => openHowto(0, true);
-    $('#mSnd').onclick = () => { SE.on = !SE.on; store.set('sound', SE.on); $('#soundBtn').textContent = '音：' + (SE.on ? 'オン' : 'オフ'); $('#mSnd').textContent = '音：' + (SE.on ? 'オン' : 'オフ'); SE.play('tap'); };
+    $('#mSet').onclick = () => openSettings(true);
     $('#mTitle').onclick = () => openConfirm('タイトルにもどりますか？', 'この試合は記録されません。', 'もどる', () => { G = null; show('title'); });
   }
+  function openSettings(fromMenu) {
+    const row = (id, label, on) => `<div class="setrow"><span>${label}</span><button class="btn ${on ? 'gold' : ''}" id="${id}">${on ? 'オン' : 'オフ'}</button></div>`;
+    openModal(`<div class="mtitle">設定</div>
+      <div class="mbody setbody">${row('sSnd', '音', SE.on)}${row('sLbl', 'カードの「コスト」「パワー」の文字', showLabels)}</div>
+      <div class="mbtns"><button class="btn gold" id="sBack">${fromMenu ? 'もどる' : 'とじる'}</button></div>`, () => openSettings(fromMenu));
+    $('#sSnd').onclick = () => { SE.on = !SE.on; store.set('sound', SE.on); SE.play('tap'); openSettings(fromMenu); };
+    $('#sLbl').onclick = () => { showLabels = !showLabels; store.set('labels', showLabels); applyLabels(); SE.play('tap'); openSettings(fromMenu); };
+    $('#sBack').onclick = () => { SE.play('tap'); if (fromMenu && G) openMenu(); else closeModal(); };
+  }
+  function cardGuide() {
+    const d = CARDS['kenpo'];
+    const items = [['1', 'コスト', '出すのに必要なエネルギー'], ['2', 'パワー', '場所の合計に足される強さ'], ['3', '名前', '歴史の人物・出来事・もの'], ['4', '効果の種類', '公開時・永続・予言・史実コンボ。<br>くわしい効果はカードを選ぶと出る']];
+    return `<div class="guide"><div class="gcard"><div class="card hc">${handInner(d, d.power)}</div>
+      <i class="num n1">1</i><i class="num n2">2</i><i class="num n3">3</i><i class="num n4">4</i></div>
+      <div class="glist">${items.map(x => `<div class="gi"><i class="num">${x[0]}</i><div><b>${x[1]}</b><span>${x[2]}</span></div></div>`).join('')}</div></div>`;
+  }
   const HOWTO = [
+    ['カードの見方', null],
     ['勝ち方', '試合は<b>6ターン</b>で終わります。<br>場所は3つ。<b>2つの場所</b>でパワーの合計が相手より多ければ勝ち！<br>場所は1ターン目に左、2ターン目に中央、3ターン目に右が表になります。'],
     ['カードを出す', '使えるエネルギーは<b>ターンの数</b>と同じ（3ターン目なら3）。<br>手札のカードを場所に<b>ドラッグ</b>するか、カードを選んでから場所を<b>クリック（タップ）</b>して置きます。<br>1つの場所に置けるのは<b>4枚まで</b>。置いたカードは、ターン終了まで手札にもどせます。'],
-    ['公開とカードの効果', '「ターン終了」で、相手といっしょにカードを公開。<b>リードしているほう</b>が先に公開します。<br><b>公開時</b>：表になったとき1回発動　<b>永続</b>：場にいるあいだずっと<br><b>予言</b>：次のターンに相手がその場所に来たら発動<br><b>史実コンボ</b>：歴史でつながる2枚が同じ場所にそろうと強くなる'],
+    ['公開とカードの効果', '「ターン終了」で、相手といっしょにカードを公開。<b>リードしているほう</b>が先に公開します。<br><b>公開時</b>：表になったとき1回発動　<b>永続</b>：場にいるあいだずっと<br><b>予言</b>：そのターン、相手も同じ場所に出していたら発動。相手の置き場所を読もう<br><b>史実コンボ</b>：歴史でつながる2枚が同じ場所にそろうと強くなる'],
     ['場所の効果', '場所にはそれぞれ効果があります。<br>カードの<b>タグ</b>（政治・外交・文化・宗教・戦い）が場所に合うとパワーアップ。<br>相手の時代の場所でも戦えるように、デッキを組み立てよう。'],
-    ['天下取り宣言と撤退', '勝つと<b>★1</b>。勝てそうなら<b>天下取り宣言</b>で★が2倍に。相手も宣言できます。<br>最終ターンになると、★は自動で2倍。<br>負けそうなら<b>撤退</b>すれば、その時点の★だけ負けて終われます。'],
+    ['天下取り宣言と撤退', 'ふつうは勝つと<b>★+2</b>、負けると<b>★-2</b>。<br><b>天下取り宣言</b>（3ターン目まで・1試合1回）をすると<b>★±4</b>に。宣言した人は撤退できません。<br><b>撤退</b>（5ターン目まで）すれば<b>★-1</b>で終われます。<br>★を集めて段位を上げよう：足軽→武士→大名→天下人'],
   ];
   function openHowto(i, fromMenu) {
     const pg = HOWTO[i];
-    openModal(`<div class="mtitle">${pg[0]}</div><div class="mbody fitb">${pg[1]}</div>
+    openModal(`<div class="mtitle">${pg[0]}</div>${pg[1] ? `<div class="mbody fitb">${pg[1]}</div>` : `<div class="mbody">${cardGuide()}</div>`}
       <div class="dots">${HOWTO.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
       <div class="mbtns"><button class="btn" id="hPrev" ${i === 0 ? 'disabled' : ''}>まえへ</button>
       ${i < HOWTO.length - 1 ? '<button class="btn gold" id="hNext">つぎへ</button>' : `<button class="btn gold" id="hClose">とじる</button>`}</div>`, () => openHowto(i, fromMenu));
@@ -625,7 +666,9 @@
     const r = G.S.over;
     const win = r.winner === ME, draw = r.winner < 0;
     const delta = draw ? 0 : (win ? r.stakes : -r.stakes);
-    const total = Math.max(0, store.get('stars', 0) + delta); store.set('stars', total);
+    const before = store.get('stars', 0);
+    const total = Math.max(0, before + delta); store.set('stars', total);
+    const up = rankIdx(total) > rankIdx(before), down = rankIdx(total) < rankIdx(before);
     SE.play(win ? 'cheer' : draw ? 'tap' : 'shock');
     const locs = [0, 1, 2].map(li => {
       const a = G.total(li, ME), b = G.total(li, OP);
@@ -638,7 +681,7 @@
     const title = r.retreat !== undefined ? (win ? '相手が撤退' : '撤退') : (win ? '勝利' : draw ? '引き分け' : '敗北');
     const fn = () => {
       openModal(`<div class="res-title ${win ? 'win' : draw ? 'draw' : 'lose'}">${title}</div>
-        <div class="res-stars">${draw ? '★の増減なし' : (win ? '★' + r.stakes + ' かくとく' : '★' + r.stakes + ' うしなった')}　（通算 ★${total}）</div>
+        <div class="res-stars">${draw ? '★の増減なし' : (win ? '★+' + r.stakes : '★-' + r.stakes)}${G.S.declaredBy >= 0 && r.retreat === undefined ? '（宣言）' : ''}　段位 <b>${rankOf(total)[1]}</b>（通算 ★${total}）</div>
         <div class="res-locs">${locs}</div>
         <div class="res-combos fitb"><h4>この試合の史実コンボ</h4>${cl || '<div style="color:var(--ink2)">史実コンボは出なかった。歴史でつながるカードを同じ場所に置いてみよう</div>'}${more}</div>
         <div class="mbtns"><button class="btn" data-act="deckAgain">デッキをえらぶ</button><button class="btn gold" data-act="again">もう一度</button></div>`, fn);
@@ -650,10 +693,12 @@
       }
     };
     fn();
+    if (up) setTimeout(() => { SE.play('cheer'); banner('段位アップ', rankOf(total)[1] + ' になった！', '', 1800); }, 900);
+    else if (down) setTimeout(() => banner('段位ダウン', rankOf(total)[1] + ' にもどった', '', 1400), 900);
   }
 
   // ---------- 開始 ----------
-  $('#soundBtn').textContent = '音：' + (SE.on ? 'オン' : 'オフ');
+  applyLabels();
   window.addEventListener('resize', fitStage);
   stage.className = layout; fitStage();
   if (layout !== stage.className) stage.className = layout;

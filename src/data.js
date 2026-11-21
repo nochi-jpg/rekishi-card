@@ -12,7 +12,7 @@
     kind: 'reveal', fx: 'buffHandRandom', text: '手札のカード1枚（ランダム）のパワー+1',
     memo: '大陸から米づくりが伝わり、人々はムラをつくってくらすようになった。' });
   card('magatama', { name: '卑弥呼の勾玉', cost: 1, power: 1, tags: ['宗教'], img: 'h_magatama',
-    kind: 'prophecy', fx: 'prophecySelf', amount: 3, text: '次のターン、相手がこの場所にカードを出したら、このカードのパワー+3',
+    kind: 'prophecy', fx: 'prophecySelf', amount: 3, text: 'このターン、相手もこの場所にカードを出していたら、このカードのパワー+3',
     memo: '勾玉は、祭りやまじないに使われた玉。' });
   card('takayuka', { name: '高床倉庫', cost: 2, power: 2, tags: ['文化'], img: 'h_takayuka',
     kind: 'ongoing', fx: 'ongoingTagHere', tag: '文化', amount: 1, self: false, text: 'この場所の自分のほかの文化カード+1',
@@ -21,14 +21,14 @@
     kind: 'reveal', fx: 'debuffEnemyRandom', amount: 2, text: 'この場所の相手のカード1枚（ランダム）のパワー-2',
     memo: '米や土地、水をめぐって、ムラどうしの争いが起こった。' });
   card('hori', { name: 'ほりとさく', cost: 2, power: 3, tags: ['戦い'], img: 'h_hori',
-    kind: 'prophecy', fx: 'prophecyEnemy', amount: 2, text: '次のターン、相手がこの場所にカードを出したら、出てきた相手のカード全部-2',
+    kind: 'prophecy', fx: 'prophecyEnemy', amount: 2, text: 'このターン、相手もこの場所にカードを出していたら、そのカード全部-2',
     memo: 'ムラのまわりをほりとさくで囲み、敵から守った（吉野ヶ里遺跡など）。' });
   card('kuni', { name: 'くに', cost: 3, power: 3, tags: ['政治'], img: 'h_kuni',
     kind: 'reveal', fx: 'kuni', amount: 3, text: 'ほかの2つの場所の両方に自分のカードがあれば、パワー+3',
     memo: '争いの中で強いムラがまわりのムラを従え、小さなくにができた。' });
   card('seidoki', { name: '青銅器・鉄器', cost: 3, power: 2, tags: ['宗教', '戦い'], img: 'h_seidoki',
-    kind: 'reveal', fx: 'buffOthersHere', amount: 1, text: 'この場所の自分のほかのカード全部+1',
-    memo: '青銅器（銅たくなど）は祭りに、鉄器は道具や武器に使われた。' });
+    kind: 'reveal', fx: 'destroyWeakest', text: 'この場所の相手のいちばん弱いカードを退場させる',
+    memo: '青銅器（銅たくなど）は祭りに、鉄器は道具や武器に使われた。鉄の武器で争いがはげしくなった。' });
   card('rekishisho', { name: '中国の歴史書', cost: 4, power: 4, tags: ['外交'], img: 'h_rekishisho',
     kind: 'reveal', fx: 'fetch', target: 'himiko', text: '山札に卑弥呼がいれば、手札に加える',
     memo: '中国の歴史書に、邪馬台国と卑弥呼のことが書かれている。' });
@@ -44,11 +44,11 @@
 
   // ===== 聖徳太子デッキ（飛鳥）=====
   card('gozoku', { name: '豪族', cost: 1, power: 2, tags: ['政治'], img: 't_gozoku',
-    kind: 'none', text: '効果なし',
-    memo: '各地で土地と人々を支配していた、力のある一族。' });
-  card('toraijin', { name: '渡来人', cost: 1, power: 1, tags: ['文化'], img: 't_toraijin',
-    kind: 'reveal', fx: 'buffHandTag', tagsAny: ['文化', '宗教'], amount: 1, text: '手札の文化か宗教のカード1枚（ランダム）のパワー+1',
-    memo: '大陸から移り住み、土木や焼き物などの技術を伝えた人々。' });
+    kind: 'reveal', fx: 'debuffEnemyRandom', amount: 1, text: 'この場所の相手のカード1枚（ランダム）のパワー-1',
+    memo: '各地で土地と人々を支配していた、力のある一族。豪族どうしで勢力を争った。' });
+  card('mononobe', { name: '物部氏との争い', cost: 2, power: 2, tags: ['戦い'], img: 't_mononobe',
+    kind: 'reveal', fx: 'debuffEnemyMax', amount: 3, text: 'この場所の相手のいちばん強いカードのパワー-3',
+    memo: '仏教を取り入れるかをめぐり、蘇我氏と物部氏が争った。蘇我氏が勝ち、仏教が広まった。' });
   card('bukkyo', { name: '仏教', cost: 1, power: 1, tags: ['宗教'], img: 't_bukkyo',
     kind: 'ongoing', fx: 'ongoingTagHere', tag: '宗教', amount: 1, self: true, text: 'この場所の自分の宗教カード+1（自分もふくむ）',
     memo: '大陸から伝わった教え。聖徳太子は深く信仰し、広めようとした。' });
@@ -86,7 +86,7 @@
       cards: ['ishibocho', 'kome', 'magatama', 'takayuka', 'arasoi', 'hori', 'kuni', 'seidoki', 'rekishisho', 'gi', 'yamatai', 'himiko'] },
     taishi: { id: 'taishi', name: '聖徳太子', theme: '改革', era: '飛鳥', face: 'shotoku', color: '#4a7fd6',
       desc: 'しくみを作って場を強くする',
-      cards: ['gozoku', 'toraijin', 'bukkyo', 'soga', 'imoko', 'ryugaku', 'kenzuishi', 'kokusho', 'kani', 'kenpo', 'horyuji', 'taishi'] },
+      cards: ['gozoku', 'bukkyo', 'mononobe', 'soga', 'imoko', 'ryugaku', 'kenzuishi', 'kokusho', 'kani', 'kenpo', 'horyuji', 'taishi'] },
   };
 
   const LOCS = {

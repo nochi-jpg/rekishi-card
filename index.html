@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>歴史カードバトル</title>
+<link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+<canvas id="bgfx"></canvas>
+<div id="stage" class="land">
+
+  <!-- タイトル -->
+  <section id="title" class="screen">
+    <div class="title-bg"></div>
+    <div class="logo">
+      <div class="logo-sub">HISTORIA CARD BATTLE</div>
+      <div class="logo-main"><span>歴史</span><span>カードバトル</span></div>
+      <div class="logo-line"></div>
+    </div>
+    <div class="title-btns">
+      <button class="btn gold big" data-act="toDeck">対戦する</button>
+      <button class="btn big" data-act="howto">あそびかた</button>
+      <button class="btn big" data-act="sound" id="soundBtn">音：オン</button>
+    </div>
+    <div class="title-foot">テスト版 v0.1　K.nom</div>
+  </section>
+
+  <!-- デッキえらび -->
+  <section id="deck" class="screen">
+    <div class="title-bg dim"></div>
+    <div class="deck-head">デッキをえらぶ</div>
+    <div class="deck-list" id="deckList"></div>
+    <div class="deck-foot">
+      <button class="btn" data-act="toTitle">もどる</button>
+    </div>
+  </section>
+
+  <!-- 対戦 -->
+  <section id="game" class="screen">
+    <div class="game-bg"></div>
+    <div id="oppBar" class="panel"></div>
+    <div id="turnBox" class="panel"></div>
+    <div id="board"></div>
+    <div id="detail" class="panel"></div>
+    <div id="ctrl"></div>
+    <div id="hand"></div>
+  </section>
+
+  <div id="fx"></div>
+  <div id="modal"></div>
+</div>
+
+<script src="lib/se.js"></script>
+<script src="src/data.js"></script>
+<script src="src/engine.js"></script>
+<script src="src/ui.js"></script>
+</body>
+</html>

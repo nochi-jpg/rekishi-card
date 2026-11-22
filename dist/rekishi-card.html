@@ -12180,7 +12180,8 @@ window.RC_PUZZLES = [{"id":1,"deck":"himiko","opp":"nakanooe","seed":47514,"pre"
       <div class="mbody pz-body"><div class="cp-honjii"><div class="hj"></div><p>最終ターンじゃ。<b>このターンだけで、3つのうち2つの場所をとれ</b>。<br>相手が出すカードは裏向きで見えておる。引くカードも相手の手も、毎回同じじゃ。</p></div>
       <div class="pz-vs"><div><div class="pz-f" style="background-image:url('${IMG(`img/face/${d.face}.webp`)}')"></div><b>${d.name}デッキ</b>${M.isOwned(p.deck) ? '' : '<small>（レンタル）</small>'}</div><span>VS</span><div><div class="pz-f o" style="background-image:url('${IMG(`img/face/${o.face}.webp`)}')"></div><b>${o.name}デッキ</b></div></div>
       ${isDone(id) ? '<div class="pz-note">クリアずみ（もう一度とけます）</div>' : '<div class="pz-note">はじめてクリアで 20コイン</div>'}</div>
-      <div class="mbtns"><button class="btn" data-act="closeModal">やめる</button><button class="btn gold" id="pzGo" data-ico="puzzle">挑戦する</button></div>`);
+      <div class="mbtns"><button class="btn" id="pzStop" data-ico="back">やめる</button><button class="btn gold" id="pzGo" data-ico="puzzle">挑戦する</button></div>`);
+    $('#pzStop').onclick = () => { U.SE.play('tap'); U.closeModal(); U.setGame(null); open(); }; // どこから開いても一覧にもどる
     $('#pzGo').onclick = () => { U.closeModal(); start(id); };
   }
   function start(id) {
@@ -12199,8 +12200,8 @@ window.RC_PUZZLES = [{"id":1,"deck":"himiko","opp":"nakanooe","seed":47514,"pre"
       const hint = fails[id] >= 2 ? `<div class="pz-hint"><b>本じいのヒント</b>「${kd.name}」がカギじゃ。${p.keyLi >= 0 ? `${LOCN(p.keyLi)}の場所に置いてみるとよいぞ。` : 'どこに置くかよく考えるのじゃ。'}</div>` : (win ? '' : '<div class="pz-note">2回まちがえると、本じいがヒントをくれる</div>');
       U.openModal(`<div class="mtitle">${win ? '正解！' : 'ざんねん…'}</div>
         <div class="mbody pz-body">${win ? `<div class="cp-honjii"><div class="hj"></div><p>見事じゃ！ カギは「${kd.name}」じゃったな。<br>${kd.memo}</p></div>${first ? '<div class="cp-coin"><span class="ci-inline"></span>+20コイン</div>' : ''}` : `<div class="cp-honjii"><div class="hj"></div><p>おしいのう。置くカードと場所を変えて、もう一度じゃ。</p></div>${hint}`}</div>
-        <div class="mbtns"><button class="btn" id="pzList">パズル一覧へ</button><button class="btn gold" id="pzAgain">${win ? (PZ.find(x => x.id === id + 1) ? '次の問題へ' : 'もう一度') : 'もう一度'}</button></div>`);
-      $('#pzList').onclick = () => { U.SE.play('tap'); U.closeModal(); U.setGame(null); open(); };
+        <div class="mbtns"><button class="btn" id="pzToList">パズル一覧へ</button><button class="btn gold" id="pzAgain">${win ? (PZ.find(x => x.id === id + 1) ? '次の問題へ' : 'もう一度') : 'もう一度'}</button></div>`);
+      $('#pzToList').onclick = () => { U.SE.play('tap'); U.closeModal(); U.setGame(null); open(); };
       $('#pzAgain').onclick = () => { U.SE.play('decide'); U.closeModal(); U.setGame(null); const nx = win && PZ.find(x => x.id === id + 1) ? id + 1 : id; nx === id ? start(id) : intro(nx); };
     }
   };

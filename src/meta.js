@@ -11,7 +11,7 @@
   const SAVE_KEY = 'save';
   function load() {
     const s = U.store.get(SAVE_KEY, null) || {};
-    if (s.v !== 1) {
+    {
       s.v = 1; s.owned = s.owned || []; s.coins = s.coins || 0;
       s.cpu = s.cpu != null ? s.cpu : (U.store.get('stars', 0) || 0); s.pvp = s.pvp || 0;
       s.started = !!s.started; s.tutorial = !!s.tutorial; s.shop = s.shop || { day: '', stock: [] };
@@ -189,18 +189,20 @@
   }
 
   // ---------- ショップ ----------
-  const PRICE = { himiko: 120, taishi: 120, yoritomo: 120, nobunaga: 120, iemitsu: 120, wakatakeru: 150, nakanooe: 150, shomu: 150, michinaga: 150, hideyoshi: 150,
+  const PRICE = { himiko: 50, taishi: 50, yoritomo: 50, nobunaga: 50, iemitsu: 50, wakatakeru: 150, nakanooe: 150, shomu: 150, michinaga: 150, hideyoshi: 150,
     kiyomori: 160, tokimune: 160, yoshimasa: 170, genpaku: 170, saigo: 170, fukuzawa: 170, ito: 180, mutsu: 200, komura: 200 };
   const today = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
   function refreshStock() {
     const day = today();
-    if (SV.shop.day === day) return;
+    if (SV.shop.day === day && SV.shop.v === 2) return;
     // 日付と端末ごとのタネで、毎日ちがう8デッキを選ぶ
     let h = SV.seed; for (const ch of day) h = (Math.imul(h ^ ch.charCodeAt(0), 2654435761) >>> 0);
     const rnd = () => { h ^= h << 13; h >>>= 0; h ^= h >>> 17; h ^= h << 5; h >>>= 0; return h / 4294967296; };
     const pool = Object.keys(DECKS).filter(id => !isOwned(id));
     for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
-    SV.shop = { day, stock: pool.slice(0, 8) }; save();
+    // 最初の5デッキ（50コイン）は優先して並ぶ
+    const st = pool.filter(id => STARTERS.includes(id)), rest = pool.filter(id => !STARTERS.includes(id));
+    SV.shop = { v: 2, day, stock: st.concat(rest).slice(0, 8) }; save();
   }
   function nextRestock() {
     const n = new Date(), t = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1); const m = Math.round((t - n) / 60000);
@@ -256,36 +258,108 @@
   function openZList() { U.show('zlist'); $('#zlistList').innerHTML = Object.values(DECKS).map(d => deckTile(d, 'zkOpen')).join(''); $('#zlistList').scrollTop = 0; U.fitAll($('#zlist')); }
 
   // ---------- 結果：コインとランク ----------
+  // 段位（足軽・武士…）のはじまりの★。CPU戦では段位が下がらない
+  function floorStars(stars) { const info = rankInfo(stars); let f = 0; for (let r = 0; r < info.r; r++) f += RANKS[r][2] * 3; return f; }
   function applyResult(r, ME) {
     const win = r.winner === ME, draw = r.winner < 0, retreat = r.retreat !== undefined;
     const before = SV.cpu, beforeInfo = rankInfo(before);
-    const delta = draw ? 0 : (win ? r.stakes : -r.stakes);
-    SV.cpu = Math.max(0, SV.cpu + delta);
+    // CPU戦：勝ち +2（宣言 +4・相手撤退 +1）／負け -1（宣言して負け -2・撤退 0）
+    let delta = draw ? 0 : win ? r.stakes : (retreat ? 0 : r.stakes >= 4 ? -2 : -1);
+    SV.cpu = Math.max(floorStars(before), SV.cpu + delta);
+    delta = SV.cpu - before;
     const coins = draw ? 15 : win ? (retreat ? 20 : r.stakes >= 4 ? 50 : 30) : 10;
     const cfrom = SV.coins; SV.coins += coins; SV.games++; if (win) SV.wins++;
     save();
     const after = rankInfo(SV.cpu);
-    return { delta, coins, cfrom, cto: SV.coins, before: beforeInfo, after, up: after.lv > beforeInfo.lv, down: after.lv < beforeInfo.lv };
+    return { delta, coins, cfrom, cto: SV.coins, before: beforeInfo, after, up: after.lv > beforeInfo.lv, down: after.lv < beforeInfo.lv, newDan: after.r > beforeInfo.r };
   }
+  const pct = (i) => Math.min(100, i.have / i.need * 100);
   function resultHtml(x) {
-    const a = x.after;
+    const b = x.done ? x.after : x.before;
     return `<div class="res-meta">
       <div class="rm-coin"><div class="ci"></div><span>コイン</span><b data-from="${x.cfrom}" data-to="${x.cto}">${x.cfrom}</b><em>+${x.coins}</em></div>
-      <div class="rm-rank"><div class="em" style="background-image:url('${a.img}')"></div><div class="rt"><div class="rl">CPUランク　${x.delta >= 0 ? '★+' + x.delta : '★' + x.delta}</div><div class="rn">${a.name}</div>
-        <div class="gauge"><i data-w="${Math.min(100, a.have / a.need * 100)}" style="width:${x.up ? 0 : Math.min(100, x.before.have / x.before.need * 100)}%"></i></div></div></div>
+      <div class="rm-rank"><div class="em" style="background-image:url('${b.img}')"></div><div class="rt"><div class="rl">CPUランク　<b class="${x.delta < 0 ? 'minus' : 'plus'}">★${x.delta >= 0 ? '+' : ''}${x.delta}</b><span class="gnum">★ ${b.have} / ${b.need}</span></div><div class="rn">${b.name}</div>
+        <div class="gauge big"><i style="width:${pct(b)}%"></i><s></s></div></div></div>
     </div>`;
   }
-  function animateResult(x) {
+  const wait = (ms) => new Promise(r => setTimeout(r, ms));
+  async function animateResult(x) {
     const b = $('.rm-coin b'); if (b) { const t0 = performance.now(); const step = (t) => { const k = Math.min(1, (t - t0) / 900); b.textContent = Math.round(x.cfrom + (x.cto - x.cfrom) * k); if (k < 1) requestAnimationFrame(step); }; setTimeout(() => requestAnimationFrame(step), 400); }
-    const g = $('.rm-rank .gauge i'); if (g) setTimeout(() => g.style.width = g.dataset.w + '%', 500);
-    if (x.up) setTimeout(() => rankUpFx(x.after), 1100);
+    const box = $('.rm-rank'); if (!box) return;
+    const g = $('.gauge i', box), num = $('.gnum', box), em = $('.em', box), rn = $('.rn', box);
+    await wait(600);
+    // ★が飛んでゲージに入る
+    const n = Math.abs(x.delta);
+    for (let i = 0; i < n; i++) { starFly(box, x.delta > 0); U.SE.play(x.delta > 0 ? 'tap' : 'ng', 0.6); await wait(170); }
+    await wait(280);
+    if (x.up) {
+      g.style.transition = 'width .55s cubic-bezier(.3,.9,.3,1)'; g.style.width = '100%';
+      num.textContent = `★ ${x.before.need} / ${x.before.need}`;
+      await wait(560);
+      box.classList.add('full'); U.SE.play('good');
+      await wait(650);
+      await rankUpFx(x.before, x.after, x.newDan);
+      // ランクの表示を新しくして、0からのびる
+      box.classList.remove('full'); em.style.backgroundImage = `url('${x.after.img}')`; rn.textContent = x.after.name;
+      box.classList.add('pop'); g.style.transition = 'none'; g.style.width = '0%'; void g.offsetWidth;
+      g.style.transition = 'width .9s cubic-bezier(.2,.8,.2,1)'; g.style.width = pct(x.after) + '%';
+      num.textContent = `★ ${x.after.have} / ${x.after.need}`;
+      x.done = true;
+    } else {
+      g.style.transition = 'width .9s cubic-bezier(.2,.8,.2,1)'; g.style.width = pct(x.after) + '%';
+      if (x.delta < 0) box.classList.add('dn'); else if (x.delta > 0) box.classList.add('gain');
+      if (x.down) { em.style.backgroundImage = `url('${x.after.img}')`; rn.textContent = x.after.name; }
+      num.textContent = `★ ${x.after.have} / ${x.after.need}`;
+      x.done = true;
+    }
   }
-  function rankUpFx(a) {
-    U.SE.play('cheer');
-    const el = document.createElement('div'); el.className = 'getfx rankup';
-    el.innerHTML = `<div class="gf-rays"></div><div class="gf-emb" style="background-image:url('${a.img}')"></div><div class="gf-t1">ランクアップ</div><div class="gf-t2">${a.name}</div><div class="gf-tap">タップしてつづける</div>`;
-    $('#fx').appendChild(el); el.style.pointerEvents = 'auto';
-    setTimeout(() => { el.onclick = () => { el.classList.add('out'); setTimeout(() => el.remove(), 300); }; }, 700);
+  function starFly(box, plus) {
+    const sr = $('#stage').getBoundingClientRect(), k = sr.width / $('#stage').offsetWidth;
+    const a = $('.rl b', box).getBoundingClientRect(), gi = $('.gauge', box).getBoundingClientRect(), fill = $('.gauge i', box).getBoundingClientRect();
+    const sx = (a.left + a.width / 2 - sr.left) / k, sy = (a.top + a.height / 2 - sr.top) / k;
+    const ex = (Math.max(fill.right - 6, gi.left + 6) - sr.left) / k, ey = (gi.top + gi.height / 2 - sr.top) / k;
+    const el = document.createElement('div'); el.className = 'starfly' + (plus ? '' : ' minus'); el.textContent = '★';
+    el.style.left = sx + 'px'; el.style.top = sy + 'px'; $('#stage').appendChild(el);
+    const mx = (sx + ex) / 2, my = Math.min(sy, ey) - 70;
+    el.animate([{ transform: 'translate(-50%,-50%) scale(.4)', opacity: 0 }, { transform: `translate(calc(-50% + ${mx - sx}px), calc(-50% + ${my - sy}px)) scale(1.6) rotate(180deg)`, opacity: 1, offset: .5 }, { transform: `translate(calc(-50% + ${ex - sx}px), calc(-50% + ${ey - sy}px)) scale(.6) rotate(360deg)`, opacity: 1 }], { duration: 620, easing: 'cubic-bezier(.3,.7,.4,1)' }).onfinish = () => {
+      el.remove(); const r = document.createElement('div'); r.className = 'gspark'; r.style.left = ex + 'px'; r.style.top = ey + 'px'; $('#stage').appendChild(r); setTimeout(() => r.remove(), 600);
+    };
+  }
+  function rankUpFx(b, a, newDan) {
+    return new Promise(done => {
+      U.SE.play('cheer'); U.SE.play('decide');
+      const el = document.createElement('div'); el.className = 'getfx rankup' + (newDan ? ' dan' : '');
+      const parts = Array.from({ length: 36 }, (_, i) => { const ang = i / 36 * Math.PI * 2, d = 260 + Math.random() * 260; return `<i class="ru-c" style="--x:${Math.cos(ang) * d}px;--y:${Math.sin(ang) * d}px;--r:${Math.random() * 720 - 360}deg;--d:${Math.random() * .3}s;background:${['#ffe7a3', '#fff', '#ff9fbf', '#8fd0ff', '#f0c75e'][i % 5]}"></i>`; }).join('');
+      el.innerHTML = `<div class="gf-rays"></div><div class="ru-flash"></div><div class="ru-ring"></div><div class="ru-ring r2"></div>${parts}
+        <div class="ru-embs"><div class="gf-emb ru-old" style="background-image:url('${b.img}')"></div><div class="gf-emb ru-new" style="background-image:url('${a.img}')"></div></div>
+        <div class="gf-t1">${newDan ? '昇段' : 'ランクアップ'}</div><div class="gf-t2">${a.name}</div><div class="gf-t3">${b.name}　→　${a.name}</div><div class="gf-tap">タップしてつづける</div>`;
+      $('#stage').appendChild(el); el.style.pointerEvents = 'auto';
+      setTimeout(() => U.SE.play('shock', 0.7), 900);
+      setTimeout(() => { el.onclick = () => { U.SE.play('tap'); el.classList.add('out'); setTimeout(() => { el.remove(); done(); }, 300); }; }, 1600);
+    });
+  }
+
+  // ---------- デバッグモード（設定の「設定」を20回おす） ----------
+  function openDebug(msg) {
+    const B = (id, t, c) => `<button class="btn ${c || ''}" data-dbg="${id}">${t}</button>`;
+    U.openModal(`<div class="mtitle">デバッグモード</div>
+      <div class="mbody dbg"><div class="dbg-st">コイン ${SV.coins}　CPU ★${SV.cpu}（${rankInfo(SV.cpu).name}）　デッキ ${owned().length}/19</div>
+      <div class="dbg-grid">${B('coin', 'コイン +1000', 'gold')}${B('all', '全デッキ入手', 'gold')}${B('up', 'CPU ★+5')}${B('down', 'CPU ★-5')}${B('max', 'ランク最高')}${B('zero', 'ランク0')}${B('shop', 'ショップ入れかえ')}${B('fast', window.RC_UI.isFast ? '早送り オフ' : '早送り オン')}${B('reset', 'セーブを消す', 'red')}${B('close', 'とじる')}</div>
+      <div class="dbg-msg">${msg || ''}</div></div>`, () => openDebug(msg));
+    document.querySelectorAll('[data-dbg]').forEach(b => b.onclick = (e) => {
+      e.stopPropagation(); U.SE.play('tap'); const k = b.dataset.dbg; let m = '';
+      if (k === 'coin') { SV.coins += 1000; m = 'コインを1000ふやした'; }
+      if (k === 'all') { SV.owned = Object.keys(DECKS); m = 'すべてのデッキを手に入れた'; }
+      if (k === 'up') { SV.cpu += 5; m = '★+5'; }
+      if (k === 'down') { SV.cpu = Math.max(0, SV.cpu - 5); m = '★-5'; }
+      if (k === 'max') { SV.cpu = RANKS.reduce((a, r) => a + r[2] * 3, 0); m = 'ランクを最高にした'; }
+      if (k === 'zero') { SV.cpu = 0; m = 'ランクを0にした'; }
+      if (k === 'shop') { SV.shop.day = ''; refreshStock(); m = 'ショップを入れかえた'; }
+      if (k === 'fast') { window.RC_UI.fast(!window.RC_UI.isFast); m = window.RC_UI.isFast ? '演出を早送りにした' : '早送りをやめた'; }
+      if (k === 'close') { U.closeModal(); renderHud(); return; }
+      if (k === 'reset') { U.openConfirm('セーブを消しますか？', 'コイン・デッキ・ランクがすべて最初にもどります。', '消す', () => { U.store.set(SAVE_KEY, null); SV = load(); location.reload(); }, 'red'); return; }
+      save(); renderHud(); openDebug(m);
+    });
   }
 
   // ---------- ボタン ----------
@@ -307,6 +381,6 @@
     if ($('#starter').classList.contains('on')) openStarter();
     renderHud(); U.fitAll();
   }, 60));
-  window.RC_META = { boot, onShow, action, toMenu, openMenu, openShop, openZList, renderDeckList, applyResult, resultHtml, animateResult, owned, isOwned, rankInfo, BGM, get save() { return SV; }, markTutorial() { SV.tutorial = true; save(); }, reset() { U.store.set(SAVE_KEY, null); SV = load(); } };
+  window.RC_META = { openDebug, openStarter, boot, onShow, action, toMenu, openMenu, openShop, openZList, renderDeckList, applyResult, resultHtml, animateResult, owned, isOwned, rankInfo, BGM, get save() { return SV; }, markTutorial() { SV.tutorial = true; save(); }, reset() { U.store.set(SAVE_KEY, null); SV = load(); } };
   boot();
 })();

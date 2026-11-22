@@ -170,7 +170,7 @@
       <div><div class="oname">${od.name}デッキ</div>${layout === 'land' ? `<div class="otheme">${od.theme}・${od.desc}（CPU）</div>` : ''}</div>
       ${G.S.declaredBy === OP ? '<div class="tagbadge decl">天下取り宣言</div>' : ''}
       <div class="ohand">${layout === 'land' ? '手札' : ''}<b>${handN}</b></div>`;
-    $('#turnBox').innerHTML = `<div class="tn">ターン ${Math.max(1, G.S.turn)}<small> / 6</small></div><div class="stk">★±${G.S.stakes}</div>
+    $('#turnBox').innerHTML = `<div class="tn">ターン ${Math.max(1, G.S.turn)}<small> / 6</small></div><div class="stk">★+${G.S.stakes}/-${G.S.stakes / 2}</div>
       <button class="menu" data-act="menu" aria-label="メニュー"><i></i><i></i><i></i></button>`;
   }
 
@@ -239,8 +239,8 @@
     const bonus = G.S.turn ? G.S.players[ME].energyBonus : 0;
     $('#ctrl').innerHTML = `<div class="orb${left <= 0 ? ' zero' : ''}${bonus ? ' bonus' : ''}"><b>${left}</b><small>${bonus ? 'エネルギー+' + bonus : 'エネルギー'}</small></div>
       <button class="btn gold b-end${!busy && !anyPlayable ? ' pulse' : ''}" data-act="end" ${busy ? 'disabled' : ''}>ターン終了</button>
-      <button class="btn blue b-decl" data-act="declare" ${busy || !G.canDeclare(ME) ? 'disabled' : ''}>${G.S.declaredBy === ME ? '宣言中<span>★±4</span>' : `天下取り<span>${layout === 'land' ? '★±4・3ターンまで' : '★±4'}</span>`}</button>
-      <button class="btn red b-ret" data-act="retreat" ${busy || !G.canRetreat(ME) ? 'disabled' : ''}>撤退<span>${G.S.declaredBy === ME ? (layout === 'land' ? '宣言中はできない' : 'できない') : (layout === 'land' ? '★-1・3ターンまで' : '★-1')}</span></button>`;
+      <button class="btn blue b-decl" data-act="declare" ${busy || !G.canDeclare(ME) ? 'disabled' : ''}>${G.S.declaredBy === ME ? '宣言中<span>★+4/-2</span>' : `天下取り<span>${layout === 'land' ? '★+4/-2 3ターンまで' : '★+4/-2'}</span>`}</button>
+      <button class="btn red b-ret" data-act="retreat" ${busy || !G.canRetreat(ME) ? 'disabled' : ''}>撤退<span>${G.S.declaredBy === ME ? (layout === 'land' ? '宣言中はできない' : 'できない') : (layout === 'land' ? '★0 3ターンまで' : '★0')}</span></button>`;
   }
 
   function renderDetail() {
@@ -441,7 +441,7 @@
     let dc = null;
     if (TUT()) TUT().cpu(G, OP);
     else { E.cpuPlan(G, OP); dc = E.cpuDecide(G, OP); }
-    if (dc === 'declare' && G.declare(OP)) { SE.play('shock'); await banner('天下取り宣言', '相手が勝負に出た！ 勝ち負けの★が±4に。撤退（★-1）は3ターン目まで', '', 1600); }
+    if (dc === 'declare' && G.declare(OP)) { SE.play('shock'); await banner('天下取り宣言', '相手が勝負に出た！ 勝てば★+4、負けると★-2。撤退は3ターン目まで', '', 1600); }
     else if (dc === 'retreat') { G.retreat(OP); renderAll(); camera(-1, 0.96, 0.45, 900); return showResult(); }
     busy = false; V.snap = G.snap(); renderAll();
     if (TUT()) TUT().onTurn(G.S.turn);
@@ -729,9 +729,9 @@
       case 'end': endTurn(); break;
       case 'unplay': if (sel) doUnplay(sel); break;
       case 'declare':
-        if (!busy && G.canDeclare(ME)) openConfirm('天下取り宣言しますか？', '勝てば<b>★+4</b>、負ければ<b>★-4</b>になります。<br>宣言すると、この試合ではもう撤退できません。', '宣言する', () => { G.declare(ME); SE.play('cheer'); renderAll(); banner('天下取り宣言', '勝てば★+4！ もう逃げない', '', 1100); }, 'blue');
+        if (!busy && G.canDeclare(ME)) openConfirm('天下取り宣言しますか？', '勝てば<b>★+4</b>、負ければ<b>★-2</b>になります。<br>宣言すると、この試合ではもう撤退できません。', '宣言する', () => { G.declare(ME); SE.play('cheer'); renderAll(); banner('天下取り宣言', '勝てば★+4！ もう逃げない', '', 1100); }, 'blue');
         break;
-      case 'retreat': if (!busy && G.canRetreat(ME)) openConfirm('撤退しますか？', '<b>★-1</b>だけ負けて、この試合を終わります。<br>（ふつうに負けると★-2、宣言されて負けると★-4）', '撤退する', () => { G.retreat(ME); SE.play('ko'); renderAll(); camera(-1, 0.96, 0.45, 900); showResult(); }); break;
+      case 'retreat': if (!busy && G.canRetreat(ME)) openConfirm('撤退しますか？', '<b>★を減らさずに</b>負けて、この試合を終わります。<br>（ふつうに負けると★-1、宣言されて負けると★-2）', '撤退する', () => { G.retreat(ME); SE.play('ko'); renderAll(); camera(-1, 0.96, 0.45, 900); showResult(); }); break;
       case 'menu': openMenu(); break;
       case 'closeModal': SE.play('tap'); closeModal(); break;
       case 'again': SE.play('decide'); closeModal(); newGame(myDeck); break;
@@ -784,11 +784,14 @@
     $('#mSet').onclick = () => openSettings(true);
     $('#mTitle').onclick = () => openConfirm('タイトルにもどりますか？', 'この試合は記録されません。', 'もどる', () => { G = null; if (window.RC_TUTORIAL) RC_TUTORIAL.stop(); RC_META.toMenu(); });
   }
+  let dbgTaps = 0;
   function openSettings(fromMenu) {
     const row = (id, label, on) => `<div class="setrow"><span>${label}</span><button class="btn ${on ? 'gold' : ''}" id="${id}">${on ? 'オン' : 'オフ'}</button></div>`;
-    openModal(`<div class="mtitle">設定</div>
-      <div class="mbody setbody">${row('sSnd', '効果音', SE.on)}${row('sBgm', 'BGM', RC_META.BGM.on)}${row('sLbl', 'カードの「コスト」「パワー」の文字', showLabels)}${row('s3d', '3D表示（重いときはオフ）', use3d)}${G ? '' : `<div class="setrow"><span>チュートリアル（本じいの教え）</span><button class="btn" id="sTut">見る</button></div>`}</div>
+    openModal(`<div class="mtitle" id="sTitle">設定</div>
+      <div class="mbody setbody">${row('sSnd', '効果音', SE.on)}${row('sBgm', 'BGM', RC_META.BGM.on)}${row('sLbl', 'カードの「コスト」「パワー」表示', showLabels)}${row('s3d', '3D表示（重いときはオフ）', use3d)}${G ? '' : `<div class="setrow"><span>チュートリアル（本じいの教え）</span><button class="btn" id="sTut">見る</button></div>`}</div>
       <div class="mbtns"><button class="btn gold" id="sBack">${fromMenu ? 'もどる' : 'とじる'}</button></div>`, () => openSettings(fromMenu));
+    // 「設定」の文字を20回おすとデバッグモード
+    $('#sTitle').onclick = () => { dbgTaps++; if (dbgTaps >= 20) { dbgTaps = 0; SE.play('decide'); RC_META.openDebug(); } };
     $('#sBgm').onclick = () => { RC_META.BGM.set(!RC_META.BGM.on); SE.play('tap'); openSettings(fromMenu); };
     $('#sSnd').onclick = () => { SE.on = !SE.on; store.set('sound', SE.on); SE.play('tap'); openSettings(fromMenu); };
     $('#s3d').onclick = () => { use3d = !use3d; store.set('d3', use3d); applyLabels(); SE.play('tap'); if (G) { renderAll(); camera(-1, 1, 1, 10); } openSettings(fromMenu); };
@@ -809,7 +812,7 @@
     ['カードを出す', '使えるエネルギーは<b>ターンの数</b>と同じ（3ターン目なら3）。<br>手札のカードを場所に<b>ドラッグ</b>するか、カードを選んでから場所を<b>クリック（タップ）</b>して置きます。<br>1つの場所に置けるのは<b>4枚まで</b>。置いたカードは、ターン終了まで手札にもどせます。'],
     ['公開とカードの効果', '「ターン終了」で、相手といっしょにカードを公開。<b>リードしているほう</b>が先に公開します。<br><b>公開時</b>：表になったとき1回発動　<b>永続</b>：場にいるあいだずっと<br><b>予言</b>：そのターン、相手も同じ場所に出していたら発動。相手の置き場所を読もう<br><b>史実コンボ</b>：歴史でつながる2枚が同じ場所にそろうと強くなる'],
     ['場所の効果', '場所にはそれぞれ効果があります。<br>カードの<b>タグ</b>（政治・外交・文化・宗教・戦い）が場所に合うとパワーアップ。<br>相手の時代の場所でも戦えるように、デッキを組み立てよう。'],
-    ['天下取り宣言と撤退', 'ふつうは勝つと<b>★+2</b>、負けると<b>★-2</b>。<br><b>天下取り宣言</b>（3ターン目まで・1試合1回）をすると<b>★±4</b>に。宣言した人は撤退できません。<br><b>撤退</b>（3ターン目まで）すれば<b>★-1</b>で終われます。<br>★を集めて段位を上げよう：足軽→武士→大名→天下人'],
+    ['天下取り宣言と撤退', 'CPU戦では、勝つと<b>★+2</b>、負けると<b>★-1</b>。<br><b>天下取り宣言</b>（3ターン目まで・1試合1回）をすると、勝てば<b>★+4</b>・負けると<b>★-2</b>。宣言した人は撤退できません。<br><b>撤退</b>（3ターン目まで）すれば★を減らさずに終われます。段位（足軽→武士…）は負けても下がりません。'],
   ];
   function openHowto(i, fromMenu) {
     const pg = HOWTO[i];
@@ -841,7 +844,7 @@
     const title = r.retreat !== undefined ? (win ? '相手が撤退' : '撤退') : (win ? '勝利' : draw ? '引き分け' : '敗北');
     const fn = () => {
       openModal(`<div class="res-title ${win ? 'win' : draw ? 'draw' : 'lose'}">${title}</div>
-        <div class="res-stars">${draw ? '★の増減なし' : (win ? '★+' + r.stakes : '★-' + r.stakes)}${G.S.declaredBy >= 0 && r.retreat === undefined ? '（宣言）' : ''}</div>
+        <div class="res-stars">${X.delta === 0 ? '★の増減なし' : (X.delta > 0 ? '★+' + X.delta : '★' + X.delta)}${G.S.declaredBy >= 0 && r.retreat === undefined ? '（宣言）' : ''}</div>
         <div class="res-locs">${locs}</div>${RC_META.resultHtml(X)}
         <div class="res-combos fitb"><h4>この試合の史実コンボ</h4>${cl || '<div style="color:var(--ink2)">史実コンボは出なかった。歴史でつながるカードを同じ場所に置いてみよう</div>'}${more}</div>
         <div class="mbtns"><button class="btn" data-act="resMenu">メニュー</button><button class="btn" data-act="deckAgain">デッキ変更</button><button class="btn gold" data-act="again">もう一度</button></div>`, () => { fn(); });
@@ -860,6 +863,6 @@
   window.addEventListener('resize', fitStage);
   stage.classList.add(layout); fitStage(); applyLabels();
   // テスト用（自動確認ツールから使う）と、meta.js から使う部品
-  window.RC_UI = { get G() { return G; }, newGame, endTurn, doPlay, action, get busy() { return busy; }, fast(v) { SPEED = v ? 0.03 : 1; }, cardNode: (u) => cardNode(u), get sel() { return sel; },
-    x: { store, SE, show, openModal, closeModal, openConfirm, fitAll, banner, sleep, setGame(v) { G = v; }, openZukanDeck, get layout() { return layout; } } };
+  window.RC_UI = { get G() { return G; }, newGame, endTurn, doPlay, action, get busy() { return busy; }, fast(v) { SPEED = v ? 0.03 : 1; }, get isFast() { return SPEED < 1; }, cardNode: (u) => cardNode(u), get sel() { return sel; },
+    x: { showResult, store, SE, show, openModal, closeModal, openConfirm, fitAll, banner, sleep, setGame(v) { G = v; }, openZukanDeck, get layout() { return layout; } } };
 })();

@@ -19,6 +19,12 @@ CHECK = r'''() => {
     if ((cs.overflow === 'hidden' || cs.overflowX === 'hidden') && (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 2))
       bad.push('はみ出し: ' + el.className + ' 「' + el.textContent.trim().slice(0, 20) + '」 ' + el.scrollWidth + '/' + el.clientWidth + ' ' + el.scrollHeight + '/' + el.clientHeight);
   });
+  // 枠に入りきらず見切れている文字・ボタン（overflow:hidden の箱の中）
+  document.querySelectorAll('#modal.on .box *, .screen.on .hud *, .screen.on .rk, .screen.on .rk *').forEach(el => {
+    if (!vis(el)) return; const cs = getComputedStyle(el); if (cs.overflow !== 'hidden' && cs.overflowY !== 'hidden') return;
+    const r = el.getBoundingClientRect();
+    el.querySelectorAll('.btn, span, b, div').forEach(c => { if (!vis(c) || !c.textContent.trim()) return; const q = c.getBoundingClientRect(); if (q.height && (q.bottom > r.bottom + 2 || q.top < r.top - 2)) bad.push('見切れ: ' + (el.className || el.tagName) + ' 「' + c.textContent.trim().slice(0, 14) + '」'); });
+  });
   // ボタンの中の文字が折り返していないか
   document.querySelectorAll('.screen.on .btn span, #modal.on .btn').forEach(el => {
     if (!vis(el)) return; const lh = parseFloat(getComputedStyle(el).lineHeight) || parseFloat(getComputedStyle(el).fontSize) * 1.3;

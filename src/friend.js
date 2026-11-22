@@ -114,7 +114,7 @@
     const bg = p.b && DECKS[p.b] ? IMG(`img/menubg/${p.b}.webp`) : IMG(`img/ui/title_bg.webp`);
     return `<div class="pcard ${cls || ''}"><div class="pc-bg" style="background-image:url('${bg}')"></div><div class="pc-head">${cls === 'opp' ? 'あいて' : 'あなた'}のプロフィール</div>
       <div class="pc-main"><div class="pc-em" style="background-image:url('${r.img}')"></div><div class="pc-t"><b>${p.n}</b><span>対人ランク ${r.name}</span><span>勝率 ${rate}（${p.w}勝 / ${p.g}戦）</span></div></div>
-      ${qr ? `<img class="pc-qr" src="${qr}" alt="QR">` : ''}</div>`;
+      ${qr ? `<img class="pc-qr qr-zoom" src="${qr}" alt="QR"><div class="qr-tip">QRをタップで大きく</div>` : ''}</div>`;
   }
 
   // ---------- 状態 ----------
@@ -189,13 +189,14 @@
         bar.querySelector('#sbSend').disabled = true; bar.querySelector('.sb-hint').textContent = '送信中…（音が鳴り終わるまで待ってね）';
         await sendText(txt).catch(() => {}); sentOnce = true; st();
       };
-      bar.querySelector('#sbOk').onclick = () => { U.SE.play('decide'); F.onRecv = null; F.waitKey = null; bar.remove(); done(inbox[key]); };
-      bar.querySelector('#sbQuit').onclick = () => { U.openConfirm('通信をやめますか？', '試合は放棄され、メニューにもどります。', 'やめる', () => { cancelled = true; F.onRecv = null; bar.remove(); window.RC_UI.clearResume(); U.setGame(null); M.toMenu(); done(null); }); };
+      bar.querySelector('#sbOk').onclick = () => { U.SE.play('decide'); F.onRecv = null; F.waitKey = null; bar.remove(); M.BGM.mute(false); done(inbox[key]); };
+      bar.querySelector('#sbQuit').onclick = () => { U.openConfirm('通信をやめますか？', '試合は放棄され、メニューにもどります。', 'やめる', () => { cancelled = true; F.onRecv = null; bar.remove(); M.BGM.mute(false); window.RC_UI.clearResume(); U.setGame(null); M.toMenu(); done(null); }); };
       st();
     });
   }
   function syncBar(title, sub) {
     const old = $('#syncBar'); if (old) old.remove();
+    M.BGM.mute(true); // 通信中はBGMを止める
     const el = document.createElement('div'); el.id = 'syncBar';
     el.innerHTML = `<div class="sb-box"><div class="sb-title">${title}</div><div class="sb-sub">${sub || ''}</div>
       <div class="sb-role">あなたは <b>${F.role}</b>（${F.role === 'A' ? '先に送る' : 'あとから送る'}）　あいて：${F.opp.n}</div>
@@ -274,7 +275,7 @@
   }
   function openTransfer() {
     U.openModal(`<div class="mtitle">セーブの引き継ぎ</div>
-      <div class="mbody tr-body"><img class="tr-qr" src="${QR.make(saveCode(), 5)}" alt="QR"><div class="tr-t">このQRを新しい端末で読むと、名前・デッキ・コイン・ランク・勝率・進み具合を引き継げます。<br>（新しい端末でもデバッグモードの「引き継ぎQRを読む」から）</div></div>
+      <div class="mbody tr-body"><img class="tr-qr qr-zoom" src="${QR.make(saveCode(), 5)}" alt="QR"><div class="tr-t">このQRを新しい端末で読むと、名前・デッキ・コイン・ランク・勝率・進み具合を引き継げます。<br>（新しい端末でもデバッグモードの「引き継ぎQRを読む」から）</div></div>
       <div class="mbtns"><button class="btn" id="trCam" data-ico="camera">カメラで読む</button><button class="btn" id="trImg" data-ico="image">画像から読む</button><button class="btn gold" data-act="closeModal">とじる</button></div>`, openTransfer, 'big');
     $('#trImg').onclick = async () => { const f = await pickImage(); if (!f) return; try { importSave(await QR.fromFile(f)); } catch (e) { U.openConfirm('読めませんでした', e.message, 'もどる', () => openTransfer(), 'gold'); } };
     $('#trCam').onclick = () => {
@@ -293,6 +294,15 @@
     }, 'gold');
   }
 
+  // QRを押すと画面いっぱいに大きく表示（とじるボタンでもどる）
+  document.addEventListener('click', (e) => {
+    const img = e.target.closest('.qr-zoom'); if (!img) return;
+    e.stopPropagation(); U.SE.play('tap');
+    const ov = document.createElement('div'); ov.className = 'qr-big';
+    ov.innerHTML = `<div class="qb-box"><img src="${img.src}" alt="QR"><button class="btn gold" data-ico="close">とじる</button></div>`;
+    $('#stage').appendChild(ov);
+    ov.querySelector('.btn').onclick = (ev) => { ev.stopPropagation(); U.SE.play('tap'); ov.remove(); };
+  }, true);
   window.RC_MODES = window.RC_MODES || {};
   window.RC_MODES.friend = MODE;
   window.RC_FRIEND = { stopCam: () => QR.stop(), open, resume, openTransfer, _test: { accept, encPkt, decPkt, onPacket, get F() { return F; }, set F(v) { F = v; }, inbox, profCode, parseProf, hash16, saveCode, loadCode, startGame } };

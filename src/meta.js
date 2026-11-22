@@ -57,7 +57,7 @@
       this.name = name;
       const old = this.cur;
       if (old) this.fade(old, 0, 500, () => old.pause());
-      if (!this.on || !this.unlocked || !this.src[name]) { this.cur = null; return; }
+      if (!this.on || !this.unlocked || this.muted || !this.src[name]) { this.cur = null; return; }
       const a = new Audio(this.src[name]); a.loop = name !== 'win' && name !== 'lose'; a.volume = 0;
       a.play().catch(() => { });
       this.cur = a; this.fade(a, this.vol, 700);
@@ -67,6 +67,8 @@
       const step = (t) => { const k = Math.min(1, (t - t0) / ms); try { a.volume = Math.max(0, Math.min(1, from + (to - from) * k)); } catch (e) { } if (k < 1) requestAnimationFrame(step); else done && done(); };
       requestAnimationFrame(step);
     },
+    // 音で通信するあいだは、BGMを止める（聞き取りのじゃまをしないように）
+    mute(m) { if (!!m === !!this.muted) return; this.muted = !!m; if (m) { const c = this.cur; this.cur = null; if (c) this.fade(c, 0, 300, () => c.pause()); } else { const n = this.name; this.name = ''; if (n) this.play(n); } },
     set(on) { this.on = on; U.store.set('bgm', on); if (!on && this.cur) { this.cur.pause(); this.cur = null; } else if (on) { const n = this.name; this.name = ''; this.play(n); } },
   };
 

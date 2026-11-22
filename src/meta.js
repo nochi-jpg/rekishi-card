@@ -274,13 +274,27 @@
         <div class="dc-era">${d.era}</div><div class="dc-clasp"></div>
         <div class="dc-face" style="background-image:url('${IMG(`img/face/${d.face}.webp`)}')"></div>
         <div class="dc-nm fit">${d.name}</div><div class="dc-th fit">「${d.theme}」</div>
-        <div class="dc-ds fitb">${own ? d.desc : '未入手　ショップで ' + (PRICE[d.id] || 150) + 'コイン'}</div>
+        <div class="dc-ds fitb">${own ? d.desc : '未入手<br>ショップで ' + (PRICE[d.id] || 150) + 'コイン'}</div>
         ${own ? (extra || '') : ''}
       </div>`;
   }
   function sortedDecks() { const all = Object.values(DECKS); return all.filter(d => isOwned(d.id)).concat(all.filter(d => !isOwned(d.id))); }
-  function renderDeckList() { $('#deckList').innerHTML = sortedDecks().map(d => deckTile(d, 'pickDeck')).join(''); $('#deckList').scrollTop = 0; U.fitAll($('#deck')); }
-  function openZList() { U.show('zlist'); $('#zlistList').innerHTML = Object.values(DECKS).map(d => deckTile(d, 'zkOpen')).join(''); $('#zlistList').scrollTop = 0; U.fitAll($('#zlist')); }
+  // デッキ一覧はスクロールせず、ページで切りかえる（横10・縦6）
+  const LP = { deck: 0, zlist: 0 };
+  function pagedList(scr, listId, decks, act, reset) {
+    const per = U.layout === 'land' ? 10 : 6, pages = Math.max(1, Math.ceil(decks.length / per));
+    if (reset) LP[scr] = 0; LP[scr] = Math.min(Math.max(0, LP[scr]), pages - 1);
+    const pg = LP[scr], root = $('#' + scr);
+    $('#' + listId).innerHTML = decks.slice(pg * per, pg * per + per).map(d => deckTile(d, act)).join('');
+    root.querySelector('.pgno').textContent = `${pg + 1} / ${pages}`;
+    const pv = root.querySelector('.dl-prev'), nx = root.querySelector('.dl-next');
+    pv.disabled = pg === 0; nx.disabled = pg >= pages - 1;
+    pv.onclick = () => { U.SE.play('tap'); LP[scr]--; pagedList(scr, listId, decks, act); };
+    nx.onclick = () => { U.SE.play('tap'); LP[scr]++; pagedList(scr, listId, decks, act); };
+    U.fitAll(root);
+  }
+  function renderDeckList(reset) { pagedList('deck', 'deckList', sortedDecks(), 'pickDeck', reset); }
+  function openZList(reset) { U.show('zlist'); pagedList('zlist', 'zlistList', Object.values(DECKS), 'zkOpen', reset); }
 
   // ---------- 結果：コインとランク ----------
   // 段位（足軽・武士…）のはじまりの★。CPU戦では段位が下がらない
@@ -463,7 +477,7 @@
       <div class="mbtns"><button class="btn" data-act="closeModal" data-ico="back">もどる</button></div>`, openModes, 'big');
   }
   function openDeckFor(purpose, head, cb) {
-    deckFor = { purpose, cb }; backFn = purpose === 'camp' ? () => window.RC_CAMP.open() : purpose === 'friend' ? () => window.RC_FRIEND.open() : null; U.closeModal(); U.show('deck'); $('#deck .deck-head').textContent = head || 'デッキをえらぶ'; renderDeckList();
+    deckFor = { purpose, cb }; backFn = purpose === 'camp' ? () => window.RC_CAMP.open() : purpose === 'friend' ? () => window.RC_FRIEND.open() : null; U.closeModal(); U.show('deck'); $('#deck .deck-head').textContent = head || 'デッキをえらぶ'; renderDeckList(true);
   }
 
   // ---------- 試合のつづき ----------
@@ -599,7 +613,7 @@
       case 'daily': U.SE.play('decide'); openDaily(); return true;
       case 'beginner': U.SE.play('decide'); openBeginner(); return true;
       case 'toDeck': U.SE.play('decide'); openModes(); return true;
-      case 'modeCpu': U.SE.play('decide'); deckFor = null; U.closeModal(); U.show('deck'); $('#deck .deck-head').textContent = 'デッキをえらぶ（CPUと対戦）'; renderDeckList(); return true;
+      case 'modeCpu': U.SE.play('decide'); deckFor = null; U.closeModal(); U.show('deck'); $('#deck .deck-head').textContent = 'デッキをえらぶ（CPUと対戦）'; renderDeckList(true); return true;
       case 'modeCamp': U.SE.play('decide'); U.closeModal(); if (window.RC_CAMP) window.RC_CAMP.open(); return true;
       case 'modePuzzle': U.SE.play('decide'); U.closeModal(); if (window.RC_PUZZLE) window.RC_PUZZLE.open(); return true;
       case 'modeFriend': U.SE.play('decide'); U.closeModal(); if (window.RC_FRIEND) window.RC_FRIEND.open(); return true;

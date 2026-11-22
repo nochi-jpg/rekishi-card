@@ -1278,6 +1278,28 @@ button { font-family: inherit; font-weight: 900; color: inherit; border: 0; back
 .port .hj-bub::before { left: 50%; top: -24px; margin: 0 0 0 -12px; border: 12px solid transparent; border-bottom: 12px solid rgba(250,246,236,.97); }
 .land .hj-bub { font-size: 17px; white-space: nowrap; } .land .hj-big { width: 180px; height: 180px; }
 
+/* ===== v0.7.3 デッキ一覧：ページ切りかえ・ゆとりのある配置 ===== */
+.deck-list { overflow: hidden !important; touch-action: auto; grid-auto-rows: var(--dh); }
+.land .deck-list { --dh: 248px; top: 88px !important; height: 512px; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; padding: 4px; }
+.port .deck-list { --dh: 244px; top: 84px !important; height: 760px; left: 24px !important; right: 24px !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; padding: 4px; }
+.dl-pg { position: absolute; left: 0; right: 0; text-align: center; font-size: 16px; font-weight: 900; color: var(--gold3); }
+.land .dl-pg { top: 608px; } .port .dl-pg { top: 850px; }
+.dl-foot .btn { white-space: nowrap; } .land .dl-foot .btn { width: 180px; } .port .dl-foot .btn { width: 128px; } .port .dl-foot { gap: 12px; }
+.land .dcase, .port .dcase { height: var(--dh, 248px); }
+.land .dcase::before, .port .dcase::before { top: 40px; }
+.port .dc-era { left: 14px; top: 12px; font-size: 12px; padding: 1px 9px; } .port .dc-clasp { right: 14px; top: 11px; width: 20px; height: 20px; }
+.land .dc-face, .port .dc-face { top: 54px; width: 88px; height: 88px; margin-left: -44px; }
+.land .dc-nm, .port .dc-nm { top: 152px; font-size: 18px; height: 26px; line-height: 26px; left: 16px; right: 16px; }
+.land .dc-th, .port .dc-th { top: 178px; font-size: 13px; height: 18px; line-height: 18px; left: 16px; right: 16px; }
+.land .dc-ds, .port .dc-ds { top: 200px; height: 34px; font-size: 12px; line-height: 17px; left: 18px; right: 18px; }
+.dpv .dcase { --dh: 248px; } .port .dpv .dcase { width: 200px; }
+#ctrl .orb small { white-space: nowrap; letter-spacing: -.02em; }
+#ctrl .orb .orb-plus { position: absolute; right: -10px; top: -8px; min-width: 30px; height: 22px; padding: 0 6px; border-radius: 11px; font-style: normal; font-size: 14px; font-weight: 900; line-height: 22px; text-align: center; color: #0e3a18; background: linear-gradient(#d8ffd0, #6fe07f); border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.5); }
+.port #ctrl .orb .orb-plus { right: -12px; top: -9px; min-width: 26px; height: 20px; line-height: 18px; font-size: 12px; padding: 0 5px; }
+.land .deck-list { --dh: 244px; } .port .deck-list { --dh: 238px; }
+.land .dc-face, .port .dc-face { top: 50px; } .land .dc-nm, .port .dc-nm { top: 146px; } .land .dc-th, .port .dc-th { top: 172px; } .land .dc-ds, .port .dc-ds { top: 194px; }
+.port #ctrl .orb .orb-plus { right: -4px; top: -11px; }
+
 </style>
 </head>
 <body>
@@ -1335,9 +1357,9 @@ button { font-family: inherit; font-weight: 900; color: inherit; border: 0; back
     <div class="title-bg dim"></div>
     <div class="deck-head">デッキをえらぶ</div>
     <div class="deck-list" id="deckList"></div>
-    <div class="deck-foot">
-            <button class="btn" data-act="shop" data-ico="shop">ショップ</button>
-    </div>
+    <div class="dl-pg pgno"></div>
+    <div class="deck-foot dl-foot"><button class="btn dl-prev" data-ico="back">まえへ</button>
+            <button class="btn" data-act="shop" data-ico="shop">ショップ</button><button class="btn dl-next" data-ico="next">つぎへ</button></div>
   </section>
 
   <!-- カード図鑑：デッキの一覧 -->
@@ -1362,9 +1384,9 @@ button { font-family: inherit; font-weight: 900; color: inherit; border: 0; back
     <div class="title-bg dim"></div>
     <div class="deck-head">カード図鑑</div>
     <div class="deck-list" id="zlistList"></div>
-    <div class="deck-foot">
-            <button class="btn" data-act="shop" data-ico="shop">ショップ</button>
-    </div>
+    <div class="dl-pg pgno"></div>
+    <div class="deck-foot dl-foot"><button class="btn dl-prev" data-ico="back">まえへ</button>
+            <button class="btn" data-act="shop" data-ico="shop">ショップ</button><button class="btn dl-next" data-ico="next">つぎへ</button></div>
   </section>
 
   <!-- カード図鑑：カード -->
@@ -10465,7 +10487,7 @@ fn rand(co: vec2<f32>, seed: f32) -> f32
     const left = G.S.turn ? G.energyLeft(ME) : 0;
     const anyPlayable = !busy && G.S.players[ME].hand.some(u => [0, 1, 2].some(li => G.canPlay(ME, u, li)));
     const bonus = G.S.turn ? G.S.players[ME].energyBonus : 0;
-    $('#ctrl').innerHTML = `<div class="orb${left <= 0 ? ' zero' : ''}${bonus ? ' bonus' : ''}"><b>${left}</b><small>${bonus ? 'エネルギー+' + bonus : 'エネルギー'}</small></div>
+    $('#ctrl').innerHTML = `<div class="orb${left <= 0 ? ' zero' : ''}${bonus ? ' bonus' : ''}"><b>${left}</b><small>エネルギー</small>${bonus ? `<i class="orb-plus">+${bonus}</i>` : ''}</div>
       <button data-ico="check" class="btn gold b-end${!busy && !anyPlayable ? ' pulse' : ''}" data-act="end" ${busy ? 'disabled' : ''}>ターン終了</button>
       <button data-ico="crown" class="btn blue b-decl" data-act="declare" ${busy || !G.canDeclare(ME) ? 'disabled' : ''}>${G.S.declaredBy === ME ? '宣言中<span>★+4/-2</span>' : `天下取り<span>${layout === 'land' ? '★+4/-2 3ターンまで' : '★+4/-2'}</span>`}</button>
       <button data-ico="flag" class="btn red b-ret" data-act="retreat" ${busy || !G.canRetreat(ME) ? 'disabled' : ''}>撤退<span>${G.S.declaredBy === ME ? (layout === 'land' ? '宣言中はできない' : 'できない') : (layout === 'land' ? '★0 3ターンまで' : '★0')}</span></button>`;
@@ -10960,8 +10982,8 @@ fn rand(co: vec2<f32>, seed: f32) -> f32
   function action(act, el) {
     if (window.RC_META && RC_META.action(act, el)) return;
     switch (act) {
-      case 'toDeck': SE.play('decide'); show('deck'); renderDeckList(); break;
-      case 'zukan': SE.play('decide'); RC_META.openZList(); break;
+      case 'toDeck': SE.play('decide'); show('deck'); renderDeckList(true); break;
+      case 'zukan': SE.play('decide'); RC_META.openZList(true); break;
       case 'zkBack': SE.play('tap'); if (zk.from === 'shop') RC_META.openShop(); else RC_META.openZList(); break;
       case 'zkPrev': case 'zkNext': {
         SE.play('tap'); const ids = Object.keys(DECKS), own = ids.filter(i => RC_META.isOwned(i)); if (own.length < 2) break;
@@ -10987,7 +11009,7 @@ fn rand(co: vec2<f32>, seed: f32) -> f32
     }
   }
 
-  function renderDeckList() { if (window.RC_META) RC_META.renderDeckList(); }
+  function renderDeckList(r) { if (window.RC_META) RC_META.renderDeckList(r); }
 
   // ---------- カード図鑑 ----------
   let zk = { deck: 0, card: 0, from: 'title' };
@@ -11182,7 +11204,7 @@ fn rand(co: vec2<f32>, seed: f32) -> f32
   window.addEventListener('resize', fitStage);
   stage.classList.add(layout); fitStage(); applyLabels();
   // テスト用（自動確認ツールから使う）と、meta.js から使う部品
-  window.RC_UI = { get G() { return G; }, newGame, endTurn, doPlay, action, get busy() { return busy; }, fast(v) { SPEED = v ? 0.03 : 1; }, resumeGame, clearResume, rebuild, get isFast() { return SPEED < 1; }, cardNode: (u) => cardNode(u), get sel() { return sel; },
+  window.RC_UI = { get G() { return G; }, renderCtrl: () => renderCtrl(), newGame, endTurn, doPlay, action, get busy() { return busy; }, fast(v) { SPEED = v ? 0.03 : 1; }, resumeGame, clearResume, rebuild, get isFast() { return SPEED < 1; }, cardNode: (u) => cardNode(u), get sel() { return sel; },
     x: { get ME() { return ME; }, get G() { return G; }, get myDeck() { return myDeck; }, get cpuDeck() { return cpuDeck; }, showResult, store, SE, show, openModal, closeModal, openConfirm, fitAll, banner, sleep, setGame(v) { G = v; }, openZukanDeck, get layout() { return layout; } } };
 })();
 
@@ -11463,13 +11485,27 @@ fn rand(co: vec2<f32>, seed: f32) -> f32
         <div class="dc-era">${d.era}</div><div class="dc-clasp"></div>
         <div class="dc-face" style="background-image:url('${IMG(`img/face/${d.face}.webp`)}')"></div>
         <div class="dc-nm fit">${d.name}</div><div class="dc-th fit">「${d.theme}」</div>
-        <div class="dc-ds fitb">${own ? d.desc : '未入手　ショップで ' + (PRICE[d.id] || 150) + 'コイン'}</div>
+        <div class="dc-ds fitb">${own ? d.desc : '未入手<br>ショップで ' + (PRICE[d.id] || 150) + 'コイン'}</div>
         ${own ? (extra || '') : ''}
       </div>`;
   }
   function sortedDecks() { const all = Object.values(DECKS); return all.filter(d => isOwned(d.id)).concat(all.filter(d => !isOwned(d.id))); }
-  function renderDeckList() { $('#deckList').innerHTML = sortedDecks().map(d => deckTile(d, 'pickDeck')).join(''); $('#deckList').scrollTop = 0; U.fitAll($('#deck')); }
-  function openZList() { U.show('zlist'); $('#zlistList').innerHTML = Object.values(DECKS).map(d => deckTile(d, 'zkOpen')).join(''); $('#zlistList').scrollTop = 0; U.fitAll($('#zlist')); }
+  // デッキ一覧はスクロールせず、ページで切りかえる（横10・縦6）
+  const LP = { deck: 0, zlist: 0 };
+  function pagedList(scr, listId, decks, act, reset) {
+    const per = U.layout === 'land' ? 10 : 6, pages = Math.max(1, Math.ceil(decks.length / per));
+    if (reset) LP[scr] = 0; LP[scr] = Math.min(Math.max(0, LP[scr]), pages - 1);
+    const pg = LP[scr], root = $('#' + scr);
+    $('#' + listId).innerHTML = decks.slice(pg * per, pg * per + per).map(d => deckTile(d, act)).join('');
+    root.querySelector('.pgno').textContent = `${pg + 1} / ${pages}`;
+    const pv = root.querySelector('.dl-prev'), nx = root.querySelector('.dl-next');
+    pv.disabled = pg === 0; nx.disabled = pg >= pages - 1;
+    pv.onclick = () => { U.SE.play('tap'); LP[scr]--; pagedList(scr, listId, decks, act); };
+    nx.onclick = () => { U.SE.play('tap'); LP[scr]++; pagedList(scr, listId, decks, act); };
+    U.fitAll(root);
+  }
+  function renderDeckList(reset) { pagedList('deck', 'deckList', sortedDecks(), 'pickDeck', reset); }
+  function openZList(reset) { U.show('zlist'); pagedList('zlist', 'zlistList', Object.values(DECKS), 'zkOpen', reset); }
 
   // ---------- 結果：コインとランク ----------
   // 段位（足軽・武士…）のはじまりの★。CPU戦では段位が下がらない
@@ -11652,7 +11688,7 @@ fn rand(co: vec2<f32>, seed: f32) -> f32
       <div class="mbtns"><button class="btn" data-act="closeModal" data-ico="back">もどる</button></div>`, openModes, 'big');
   }
   function openDeckFor(purpose, head, cb) {
-    deckFor = { purpose, cb }; backFn = purpose === 'camp' ? () => window.RC_CAMP.open() : purpose === 'friend' ? () => window.RC_FRIEND.open() : null; U.closeModal(); U.show('deck'); $('#deck .deck-head').textContent = head || 'デッキをえらぶ'; renderDeckList();
+    deckFor = { purpose, cb }; backFn = purpose === 'camp' ? () => window.RC_CAMP.open() : purpose === 'friend' ? () => window.RC_FRIEND.open() : null; U.closeModal(); U.show('deck'); $('#deck .deck-head').textContent = head || 'デッキをえらぶ'; renderDeckList(true);
   }
 
   // ---------- 試合のつづき ----------
@@ -11788,7 +11824,7 @@ fn rand(co: vec2<f32>, seed: f32) -> f32
       case 'daily': U.SE.play('decide'); openDaily(); return true;
       case 'beginner': U.SE.play('decide'); openBeginner(); return true;
       case 'toDeck': U.SE.play('decide'); openModes(); return true;
-      case 'modeCpu': U.SE.play('decide'); deckFor = null; U.closeModal(); U.show('deck'); $('#deck .deck-head').textContent = 'デッキをえらぶ（CPUと対戦）'; renderDeckList(); return true;
+      case 'modeCpu': U.SE.play('decide'); deckFor = null; U.closeModal(); U.show('deck'); $('#deck .deck-head').textContent = 'デッキをえらぶ（CPUと対戦）'; renderDeckList(true); return true;
       case 'modeCamp': U.SE.play('decide'); U.closeModal(); if (window.RC_CAMP) window.RC_CAMP.open(); return true;
       case 'modePuzzle': U.SE.play('decide'); U.closeModal(); if (window.RC_PUZZLE) window.RC_PUZZLE.open(); return true;
       case 'modeFriend': U.SE.play('decide'); U.closeModal(); if (window.RC_FRIEND) window.RC_FRIEND.open(); return true;

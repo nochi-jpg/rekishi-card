@@ -1270,3 +1270,25 @@ button { font-family: inherit; font-weight: 900; color: inherit; border: 0; back
 .port .hj-talk { flex-direction: column; gap: 10px; } .port .hj-big { width: 170px; height: 170px; } .port .hj-bub { font-size: 16px; padding: 14px 16px; }
 .port .hj-bub::before { left: 50%; top: -24px; margin: 0 0 0 -12px; border: 12px solid transparent; border-bottom: 12px solid rgba(250,246,236,.97); }
 .land .hj-bub { font-size: 17px; white-space: nowrap; } .land .hj-big { width: 180px; height: 180px; }
+
+/* ===== v0.7.3 デッキ一覧：ページ切りかえ・ゆとりのある配置 ===== */
+.deck-list { overflow: hidden !important; touch-action: auto; grid-auto-rows: var(--dh); }
+.land .deck-list { --dh: 248px; top: 88px !important; height: 512px; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; padding: 4px; }
+.port .deck-list { --dh: 244px; top: 84px !important; height: 760px; left: 24px !important; right: 24px !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; padding: 4px; }
+.dl-pg { position: absolute; left: 0; right: 0; text-align: center; font-size: 16px; font-weight: 900; color: var(--gold3); }
+.land .dl-pg { top: 608px; } .port .dl-pg { top: 850px; }
+.dl-foot .btn { white-space: nowrap; } .land .dl-foot .btn { width: 180px; } .port .dl-foot .btn { width: 128px; } .port .dl-foot { gap: 12px; }
+.land .dcase, .port .dcase { height: var(--dh, 248px); }
+.land .dcase::before, .port .dcase::before { top: 40px; }
+.port .dc-era { left: 14px; top: 12px; font-size: 12px; padding: 1px 9px; } .port .dc-clasp { right: 14px; top: 11px; width: 20px; height: 20px; }
+.land .dc-face, .port .dc-face { top: 54px; width: 88px; height: 88px; margin-left: -44px; }
+.land .dc-nm, .port .dc-nm { top: 152px; font-size: 18px; height: 26px; line-height: 26px; left: 16px; right: 16px; }
+.land .dc-th, .port .dc-th { top: 178px; font-size: 13px; height: 18px; line-height: 18px; left: 16px; right: 16px; }
+.land .dc-ds, .port .dc-ds { top: 200px; height: 34px; font-size: 12px; line-height: 17px; left: 18px; right: 18px; }
+.dpv .dcase { --dh: 248px; } .port .dpv .dcase { width: 200px; }
+#ctrl .orb small { white-space: nowrap; letter-spacing: -.02em; }
+#ctrl .orb .orb-plus { position: absolute; right: -10px; top: -8px; min-width: 30px; height: 22px; padding: 0 6px; border-radius: 11px; font-style: normal; font-size: 14px; font-weight: 900; line-height: 22px; text-align: center; color: #0e3a18; background: linear-gradient(#d8ffd0, #6fe07f); border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.5); }
+.port #ctrl .orb .orb-plus { right: -12px; top: -9px; min-width: 26px; height: 20px; line-height: 18px; font-size: 12px; padding: 0 5px; }
+.land .deck-list { --dh: 244px; } .port .deck-list { --dh: 238px; }
+.land .dc-face, .port .dc-face { top: 50px; } .land .dc-nm, .port .dc-nm { top: 146px; } .land .dc-th, .port .dc-th { top: 172px; } .land .dc-ds, .port .dc-ds { top: 194px; }
+.port #ctrl .orb .orb-plus { right: -4px; top: -11px; }

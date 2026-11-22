@@ -277,7 +277,7 @@
     const left = G.S.turn ? G.energyLeft(ME) : 0;
     const anyPlayable = !busy && G.S.players[ME].hand.some(u => [0, 1, 2].some(li => G.canPlay(ME, u, li)));
     const bonus = G.S.turn ? G.S.players[ME].energyBonus : 0;
-    $('#ctrl').innerHTML = `<div class="orb${left <= 0 ? ' zero' : ''}${bonus ? ' bonus' : ''}"><b>${left}</b><small>${bonus ? 'エネルギー+' + bonus : 'エネルギー'}</small></div>
+    $('#ctrl').innerHTML = `<div class="orb${left <= 0 ? ' zero' : ''}${bonus ? ' bonus' : ''}"><b>${left}</b><small>エネルギー</small>${bonus ? `<i class="orb-plus">+${bonus}</i>` : ''}</div>
       <button data-ico="check" class="btn gold b-end${!busy && !anyPlayable ? ' pulse' : ''}" data-act="end" ${busy ? 'disabled' : ''}>ターン終了</button>
       <button data-ico="crown" class="btn blue b-decl" data-act="declare" ${busy || !G.canDeclare(ME) ? 'disabled' : ''}>${G.S.declaredBy === ME ? '宣言中<span>★+4/-2</span>' : `天下取り<span>${layout === 'land' ? '★+4/-2 3ターンまで' : '★+4/-2'}</span>`}</button>
       <button data-ico="flag" class="btn red b-ret" data-act="retreat" ${busy || !G.canRetreat(ME) ? 'disabled' : ''}>撤退<span>${G.S.declaredBy === ME ? (layout === 'land' ? '宣言中はできない' : 'できない') : (layout === 'land' ? '★0 3ターンまで' : '★0')}</span></button>`;
@@ -772,8 +772,8 @@
   function action(act, el) {
     if (window.RC_META && RC_META.action(act, el)) return;
     switch (act) {
-      case 'toDeck': SE.play('decide'); show('deck'); renderDeckList(); break;
-      case 'zukan': SE.play('decide'); RC_META.openZList(); break;
+      case 'toDeck': SE.play('decide'); show('deck'); renderDeckList(true); break;
+      case 'zukan': SE.play('decide'); RC_META.openZList(true); break;
       case 'zkBack': SE.play('tap'); if (zk.from === 'shop') RC_META.openShop(); else RC_META.openZList(); break;
       case 'zkPrev': case 'zkNext': {
         SE.play('tap'); const ids = Object.keys(DECKS), own = ids.filter(i => RC_META.isOwned(i)); if (own.length < 2) break;
@@ -799,7 +799,7 @@
     }
   }
 
-  function renderDeckList() { if (window.RC_META) RC_META.renderDeckList(); }
+  function renderDeckList(r) { if (window.RC_META) RC_META.renderDeckList(r); }
 
   // ---------- カード図鑑 ----------
   let zk = { deck: 0, card: 0, from: 'title' };
@@ -994,6 +994,6 @@
   window.addEventListener('resize', fitStage);
   stage.classList.add(layout); fitStage(); applyLabels();
   // テスト用（自動確認ツールから使う）と、meta.js から使う部品
-  window.RC_UI = { get G() { return G; }, newGame, endTurn, doPlay, action, get busy() { return busy; }, fast(v) { SPEED = v ? 0.03 : 1; }, resumeGame, clearResume, rebuild, get isFast() { return SPEED < 1; }, cardNode: (u) => cardNode(u), get sel() { return sel; },
+  window.RC_UI = { get G() { return G; }, renderCtrl: () => renderCtrl(), newGame, endTurn, doPlay, action, get busy() { return busy; }, fast(v) { SPEED = v ? 0.03 : 1; }, resumeGame, clearResume, rebuild, get isFast() { return SPEED < 1; }, cardNode: (u) => cardNode(u), get sel() { return sel; },
     x: { get ME() { return ME; }, get G() { return G; }, get myDeck() { return myDeck; }, get cpuDeck() { return cpuDeck; }, showResult, store, SE, show, openModal, closeModal, openConfirm, fitAll, banner, sleep, setGame(v) { G = v; }, openZukanDeck, get layout() { return layout; } } };
 })();

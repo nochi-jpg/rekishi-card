@@ -54,6 +54,9 @@ CHECK = r'''() => {
     m.querySelectorAll('*').forEach(c => { if (!vis(c)) return; const r = c.getBoundingClientRect(); if (!r.height) return;
       if (r.bottom > mr.bottom + 2 || r.top < mr.top - 2) bad.push('本文から出ている: ' + (c.className || c.tagName) + ' ' + (c.textContent||'').trim().slice(0, 12));
       if (br && r.bottom > br.top + 1 && r.top < br.bottom) bad.push('ボタンとかぶり: ' + (c.className || c.tagName)); }); });
+  // エネルギーの玉の中の文字
+  document.querySelectorAll('#ctrl .orb small, #ctrl .orb b').forEach(t => { if (!vis(t)) return; const o = t.closest('.orb').getBoundingClientRect(); const rg = document.createRange(); rg.selectNodeContents(t); const r = rg.getBoundingClientRect();
+    if (r.left < o.left - 1 || r.right > o.right + 1) bad.push('玉からはみ出し: ' + t.textContent); });
   // 手札・盤面カードのかぶり
   const cs = Array.from(document.querySelectorAll('#hand .card'));
   for (let i = 0; i < cs.length; i++) for (let j = i + 1; j < cs.length; j++) {
@@ -139,6 +142,7 @@ async def main():
                     await pg.wait_for_timeout(400)
                     await pg.screenshot(path=f'{OUT}/{name}_3game_t{t}.png'); allbad[name+f'_game{t}'] = await pg.evaluate(CHECK)
                 if t == 5:
+                    await pg.evaluate("RC_UI.G.S.players[0].energyBonus = 2; RC_UI.renderCtrl()"); await pg.wait_for_timeout(100)
                     await pg.screenshot(path=f'{OUT}/{name}_3game_t{t}.png'); allbad[name+f'_game{t}'] = await pg.evaluate(CHECK)
                 await pg.evaluate("void RC_UI.endTurn()")
                 await pg.wait_for_timeout(100)

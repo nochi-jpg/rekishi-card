@@ -168,7 +168,7 @@
   function firstRun() {
     if (!SV.name) return openNameInput(firstRun, true);
     U.openModal(`<div class="mtitle">ようこそ</div>
-      <div class="mbody fitb" style="text-align:center">本じい「わしは歴史の教科書、本じいじゃ。<br>はじめに、遊び方を教えてやろうか？」</div>
+      <div class="mbody hj-talk"><div class="hj-big"></div><div class="hj-bub"><b>本じい</b>わしは歴史の教科書の精、本じいじゃ。<br>${SV.name ? SV.name + 'よ、' : ''}はじめに、遊び方を教えてやろうか？<small>このゲームは、3つの場所をうばいあう陣取りゲームじゃ</small></div></div>
       <div class="mbtns"><button class="btn" id="ftSkip">あとで</button><button class="btn gold" id="ftTut">教えてもらう</button></div>`);
     $('#ftSkip').onclick = () => { U.closeModal(); openStarter(); };
     $('#ftTut').onclick = () => { U.closeModal(); if (window.RC_TUTORIAL) window.RC_TUTORIAL.start(() => openStarter()); else openStarter(); };
@@ -184,12 +184,17 @@
       </div>`; }).join('');
     U.fitAll($('#starter'));
   }
+  // 確認画面に出すデッキの見本（ケースともらえる背景）
+  function deckPreview(id) {
+    const d = DECKS[id];
+    return `<div class="dpv"><div class="dcase" style="--c:${d.color}"><div class="dc-era">${d.era}</div><div class="dc-clasp"></div><div class="dc-face" style="background-image:url('${IMG(`img/face/${d.face}.webp`)}')"></div><div class="dc-nm fit">${d.name}</div><div class="dc-th fit">「${d.theme}」</div><div class="dc-ds fitb">${d.desc}</div></div><div class="dpv-bg"><div class="dpv-img" style="background-image:url('${IMG(`img/menubg/${id}.webp`)}')"></div><span>${window.RC_ICON('gift')}メニュー背景つき</span></div></div>`;
+  }
   function pickStarter(id) {
     const d = DECKS[id];
-    U.openConfirm(`${d.name}デッキにする？`, `テーマ「${d.theme}」<br>${d.desc}<br><br>ほかのデッキは、あとでショップで手に入る。`, 'これにする', () => {
+    U.openConfirm(`${d.name}デッキにする？`, 'ほかのデッキは、あとでショップで手に入る。', 'これにする', () => {
       SV.owned = [id]; SV.started = true; save();
       getDeckFx(id, () => { toMenu(); setTimeout(() => { if (!SV.begShown) { SV.begShown = true; save(); openBeginner(); } }, 900); });
-    }, 'gold');
+    }, 'gold', deckPreview(id));
   }
 
   // ---------- デッキを手に入れた演出 ----------
@@ -248,11 +253,11 @@
   function buy(id) {
     const d = DECKS[id], price = PRICE[id] || 150;
     if (isOwned(id) || SV.coins < price) return;
-    U.openConfirm(`${d.name}デッキを買う？`, `<span class="ci-inline"></span>${price} 枚で買います。<br>（いま ${SV.coins} 枚 → のこり ${SV.coins - price} 枚）`, '買う', () => {
+    U.openConfirm(`${d.name}デッキを買う？`, `<span class="ci-inline"></span>${price} 枚で買います（のこり ${SV.coins - price} 枚）`, '買う', () => {
       const from = SV.coins; SV.coins -= price; SV.owned.push(id); save();
       U.SE.play('decide'); countCoins(from, SV.coins);
       getDeckFx(id, () => renderShop());
-    }, 'gold');
+    }, 'gold', deckPreview(id));
   }
   function countCoins(from, to) {
     const el = $('#coinNum'); if (!el) return;
@@ -622,6 +627,6 @@
     if ($('#starter').classList.contains('on')) openStarter();
     renderHud(); U.fitAll();
   }, 60));
-  window.RC_META = { rankUpFx, track, refreshDaily, openDeckFor, renderHud, get SV() { return SV; }, saveNow: () => save(), countCoins, playerName: () => SV.name || '－', openNameInput, openBgPicker, applyBg, openDebug, openStarter, boot, onShow, action, toMenu, openMenu, openShop, openZList, renderDeckList, applyResult, resultHtml, animateResult, owned, isOwned, rankInfo, BGM, get save() { return SV; }, markTutorial() { SV.tutorial = true; save(); }, reset() { U.store.set(SAVE_KEY, null); SV = load(); } };
+  window.RC_META = { firstRun, rankUpFx, track, refreshDaily, openDeckFor, renderHud, get SV() { return SV; }, saveNow: () => save(), countCoins, playerName: () => SV.name || '－', openNameInput, openBgPicker, applyBg, openDebug, openStarter, boot, onShow, action, toMenu, openMenu, openShop, openZList, renderDeckList, applyResult, resultHtml, animateResult, owned, isOwned, rankInfo, BGM, get save() { return SV; }, markTutorial() { SV.tutorial = true; save(); }, reset() { U.store.set(SAVE_KEY, null); SV = load(); } };
   boot();
 })();

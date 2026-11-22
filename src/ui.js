@@ -822,11 +822,11 @@
   function openZukanDeck(id, from) { zk.from = from; zk.deck = Object.keys(DECKS).indexOf(id); zk.card = 0; show('zukan'); renderZukan(); }
 
   // ---------- モーダル ----------  // ---------- モーダル ----------
-  function openModal(html, redraw, cls) { const M = $('#modal'); M.innerHTML = `<div class="shade"></div><div class="box panel ${cls || ''}">${html}</div>`; M.classList.add('on'); modalRedraw = redraw || null; fitAll(M); }
+  function openModal(html, redraw, cls) { const M = $('#modal'); M.innerHTML = `<div class="shade"></div><div class="box panel ${cls || ''}">${html}</div>`; M.classList.add('on'); modalRedraw = redraw || null; M.querySelectorAll('.mtitle').forEach(t => t.classList.add('fit')); fitAll(M); }
   function closeModal() { const M = $('#modal'); M.classList.remove('on'); M.innerHTML = ''; modalRedraw = null; }
-  function openConfirm(title, body, okLabel, onOk, color) {
-    openModal(`<div class="mtitle">${title}</div><div class="mbody fitb" style="text-align:center">${body}</div>
-      <div class="mbtns"><button class="btn" data-act="closeModal">やめる</button><button class="btn ${color || 'red'}" id="mOk">${okLabel}</button></div>`);
+  function openConfirm(title, body, okLabel, onOk, color, pre) {
+    openModal(`<div class="mtitle">${title}</div><div class="mbody cbody">${pre || ''}<div class="fitb ctext">${body}</div></div>
+      <div class="mbtns"><button class="btn" data-act="closeModal" data-ico="back">やめる</button><button class="btn ${color || 'red'}" id="mOk">${okLabel}</button></div>`, null, pre ? 'cfm tall' : 'cfm');
     $('#mOk').onclick = () => { closeModal(); onOk(); };
   }
   function openMenu() {

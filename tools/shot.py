@@ -43,6 +43,17 @@ CHECK = r'''() => {
   // 上の枠からはみ出した中身
   ['#turnBox', '#oppBar'].forEach(q => { const p = document.querySelector(q); if (!p || !vis(p)) return; const pr = p.getBoundingClientRect();
     p.querySelectorAll('*').forEach(c => { if (!vis(c)) return; const r = c.getBoundingClientRect(); if (r.right > pr.right + 1 || r.left < pr.left - 1) bad.push('枠からはみ出し: ' + q + ' ' + (c.className || c.tagName)); }); });
+  // モーダル見出しの折り返し・本文とのかぶり
+  document.querySelectorAll('#modal.on .mtitle').forEach(t => { if (!vis(t)) return; const rg = document.createRange(); rg.selectNodeContents(t);
+    const lines = new Set(Array.from(rg.getClientRects()).map(r => Math.round(r.top))); if (lines.size > 1) bad.push('見出し折り返し: ' + t.textContent.trim().slice(0, 20));
+    const tb = rg.getBoundingClientRect(); const mb = t.parentElement.querySelector('.mbody'); if (mb && tb.bottom > mb.getBoundingClientRect().top + 1) bad.push('見出しと本文のかぶり: ' + t.textContent.trim().slice(0, 20));
+    if (tb.width > t.getBoundingClientRect().width + 1) bad.push('見出しはみ出し: ' + t.textContent.trim().slice(0, 20)); });
+  // モーダル本文の中身が本文の枠やボタンにかぶっていないか
+  document.querySelectorAll('#modal.on .mbody').forEach(m => { if (!vis(m)) return; const mr = m.getBoundingClientRect(); const bt = m.parentElement.querySelector('.mbtns');
+    const br = bt ? bt.getBoundingClientRect() : null;
+    m.querySelectorAll('*').forEach(c => { if (!vis(c)) return; const r = c.getBoundingClientRect(); if (!r.height) return;
+      if (r.bottom > mr.bottom + 2 || r.top < mr.top - 2) bad.push('本文から出ている: ' + (c.className || c.tagName) + ' ' + (c.textContent||'').trim().slice(0, 12));
+      if (br && r.bottom > br.top + 1 && r.top < br.bottom) bad.push('ボタンとかぶり: ' + (c.className || c.tagName)); }); });
   // 手札・盤面カードのかぶり
   const cs = Array.from(document.querySelectorAll('#hand .card'));
   for (let i = 0; i < cs.length; i++) for (let j = i + 1; j < cs.length; j++) {
@@ -86,8 +97,13 @@ async def main():
             for nm, js in [('daily', "RC_UI.x.closeModal(); RC_UI.action('daily')"), ('modes', "RC_UI.x.closeModal(); RC_UI.action('toDeck')"), ('settings', "RC_UI.x.closeModal(); RC_UI.action('settings')"),
                            ('name', "RC_UI.x.closeModal(); RC_META.openNameInput(()=>{})"), ('bgpick', "RC_UI.x.closeModal(); RC_META.openBgPicker()"), ('debug', "RC_UI.x.closeModal(); RC_META.openDebug()"),
                            ('transfer', "RC_UI.x.closeModal(); RC_FRIEND.openTransfer()"), ('puzzle', "RC_UI.x.closeModal(); RC_PUZZLE.open()"), ('camp', "RC_UI.x.closeModal(); RC_CAMP.open()"),
-                           ('campch', "RC_CAMP.openChapter(0)"), ('friend', "RC_UI.x.closeModal(); RC_FRIEND.open()"), ('deck', "RC_UI.x.closeModal(); RC_UI.action('modeCpu')")]:
-                await pg.evaluate(js); await pg.wait_for_timeout(450)
+                           ('campch', "RC_CAMP.openChapter(0)"), ('friend', "RC_UI.x.closeModal(); RC_FRIEND.open()"), ('deck', "RC_UI.x.closeModal(); RC_UI.action('modeCpu')"),
+                           ('welcome', "RC_UI.x.closeModal(); RC_META.SV.name='たろう'; RC_META.firstRun()"), ('starter', "RC_UI.x.closeModal(); RC_META.openStarter && (RC_META.SV.started=false, RC_META.openStarter())"),
+                           ('starterCfm', "RC_UI.action('pickStarter', {dataset:{deck:'nobunaga'}})"),
+                           ('buyCfm', "RC_UI.x.closeModal(); RC_META.SV.started=true; RC_UI.action('shop'); RC_UI.action('shopBuy', {dataset:{deck:'kiyomori'}})"),
+                           ('lockCfm', "RC_UI.x.closeModal(); RC_UI.action('lockedDeck', {dataset:{deck:'kiyomori'}})"),
+                           ('resetCfm', "RC_UI.x.closeModal(); RC_UI.x.openConfirm('セーブを消しますか？', 'コイン・デッキ・ランクがすべて最初にもどります。', '消す', ()=>{})")]:
+                await pg.evaluate(js); await pg.wait_for_timeout(1300 if nm == 'buyCfm' else 450)
                 await pg.screenshot(path=f'{OUT}/{name}_7{nm}.png'); allbad[name+'_'+nm] = await pg.evaluate(CHECK)
             await pg.evaluate("RC_UI.x.closeModal(); RC_META.toMenu()"); await pg.wait_for_timeout(300); await pg.evaluate("RC_UI.x.closeModal()")
             await pg.evaluate("RC_UI.action('closeModal')")

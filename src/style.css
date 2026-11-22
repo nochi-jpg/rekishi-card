@@ -1247,3 +1247,26 @@ button { font-family: inherit; font-weight: 900; color: inherit; border: 0; back
 .dm.now { opacity: 1 !important; border-color: #6dff8f; box-shadow: 0 0 16px rgba(109,255,143,.6); animation: vsTag .5s cubic-bezier(.2,1.4,.4,1); }
 .bm-new { color: #6dff8f; font-size: 16px; }
 .port .mbody.beg .dm { height: auto; min-height: 54px; } .port .mbody.beg .dm-t { flex-basis: auto; flex: 1; font-size: 13px; } .port .mbody.beg .dm-b { width: 100px; font-size: 12px; }
+
+/* ===== v0.7.2 確認画面・見出し ===== */
+.mtitle { left: 24px !important; right: 24px !important; white-space: nowrap; overflow: hidden; }
+.land #modal .box.cfm { height: 330px; } .port #modal .box.cfm { height: 400px; }
+.land #modal .box.cfm.tall { width: 820px; height: 560px; } .port #modal .box.cfm.tall { height: 760px; }
+.box.cfm .mbody.cbody { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; }
+.land .box.cfm .mbody.cbody { height: 170px; } .port .box.cfm .mbody.cbody { height: 230px; }
+.land .box.cfm.tall .mbody.cbody { height: 390px; } .port .box.cfm.tall .mbody.cbody { height: 580px; }
+.cbody .ctext { width: 100%; max-height: 120px; }
+.dpv { display: flex; gap: 22px; align-items: center; justify-content: center; }
+.dpv .dcase { width: 200px; flex: none; cursor: default; } .dpv .dcase:hover { transform: none; }
+.dpv-bg { display: flex; flex-direction: column; align-items: center; gap: 8px; } .dpv-img { width: 320px; height: 180px; border-radius: 10px; background: center/cover; box-shadow: 0 0 0 2px var(--gold), 0 8px 18px rgba(0,0,0,.5); }
+.dpv-bg span { display: flex; align-items: center; gap: 6px; font-size: 15px; color: var(--gold3); } .dpv-bg .ico { width: 20px; height: 20px; }
+.port .dpv { flex-direction: column; gap: 12px; } .port .dpv .dcase { width: 150px; } .port .dpv-img { width: 300px; height: 169px; }
+/* ようこそ（本じい） */
+.hj-talk { display: flex; align-items: center; gap: 18px; justify-content: center; }
+.hj-big { flex: none; width: 200px; height: 200px; background: url('../img/tut/honjii_smile.webp') center/contain no-repeat; animation: tutBob 2.4s ease-in-out infinite; }
+.hj-bub { position: relative; padding: 18px 22px; border-radius: 16px; background: rgba(250,246,236,.97); color: #1b1530; font-size: 19px; font-weight: 900; line-height: 1.6; box-shadow: 0 8px 20px rgba(0,0,0,.5); }
+.hj-bub::before { content: ''; position: absolute; left: -24px; top: 50%; margin-top: -12px; border: 12px solid transparent; border-right: 12px solid rgba(250,246,236,.97); }
+.hj-bub b { display: block; font-size: 14px; color: #8a5a10; margin-bottom: 2px; } .hj-bub small { display: block; margin-top: 8px; font-size: 14px; color: #b0303c; }
+.port .hj-talk { flex-direction: column; gap: 10px; } .port .hj-big { width: 170px; height: 170px; } .port .hj-bub { font-size: 16px; padding: 14px 16px; }
+.port .hj-bub::before { left: 50%; top: -24px; margin: 0 0 0 -12px; border: 12px solid transparent; border-bottom: 12px solid rgba(250,246,236,.97); }
+.land .hj-bub { font-size: 17px; white-space: nowrap; } .land .hj-big { width: 180px; height: 180px; }

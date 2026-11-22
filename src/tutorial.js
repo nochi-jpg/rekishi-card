@@ -135,11 +135,14 @@
     const bw = land ? 620 : 452, bh = box.offsetHeight || 150, m = 14;
     const cand = land
       ? [['tc', (W - bw) / 2, m], ['mr', W - bw - m, (H - bh) / 2], ['ml', m, (H - bh) / 2], ['bc', (W - bw) / 2, H - bh - m]]
-      : [['tc', (W - bw) / 2, m + 50], ['mc', (W - bw) / 2, (H - bh) / 2], ['bc', (W - bw) / 2, H - bh - m]];
+      : [['tc', (W - bw) / 2, 8], ['dt', (W - bw) / 2, 628 - bh], ['bc', (W - bw) / 2, H - bh - m], ['mc', (W - bw) / 2, (H - bh) / 2]];
+    // 自分の場と手札は、なるべくかくさない（照らした場所の次に避ける）
+    const avoid = [...document.querySelectorAll('#board .side.me, #hand')].map(stageRect);
     let best = cand[0], bestO = 1e12;
     for (const c of cand) {
       let o = 0;
       rects.forEach(r => { const pad = 18; const ox = Math.max(0, Math.min(c[1] + bw, r.x + r.w + pad) - Math.max(c[1], r.x - pad)); const oy = Math.max(0, Math.min(c[2] + bh, r.y + r.h + pad) - Math.max(c[2], r.y - pad)); o += ox * oy; });
+      avoid.forEach(r => { const ox = Math.max(0, Math.min(c[1] + bw, r.x + r.w) - Math.max(c[1], r.x)); const oy = Math.max(0, Math.min(c[2] + bh, r.y + r.h) - Math.max(c[2], r.y)); o += ox * oy * 0.25; });
       if (c[0] === boxPos) o -= 1; // 同じ位置を少しだけ好む（ガタつき防止）
       if (o < bestO) { bestO = o; best = c; }
     }

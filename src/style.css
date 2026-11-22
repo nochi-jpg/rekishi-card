@@ -855,3 +855,10 @@ button { font-family: inherit; font-weight: 900; color: inherit; border: 0; back
 .port .gcard { margin-top: 10px; }
 .port .setrow span { font-size: 14px; }
 .getfx.rankup { z-index: 96; }
+/* v0.5.2 縦画面のチュートリアル吹き出しを小さく */
+.port #tut .tut-box { padding: 10px 12px 10px 8px; gap: 8px; }
+.port #tut .tut-face { flex-basis: 60px; height: 60px; }
+.port #tut .tut-txt { font-size: 14px; line-height: 1.5; min-height: 0; }
+.port #tut .tut-foot { min-height: 38px; } .port #tut .tut-foot .btn { height: 38px; min-width: 120px; font-size: 15px; }
+.port #tut .tut-hint { height: 34px; line-height: 34px; font-size: 14px; }
+.port #tut .tut-name { font-size: 13px; } .port #tut .tut-skip { height: 26px; min-width: 80px; font-size: 12px; }

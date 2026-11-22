@@ -112,7 +112,7 @@
 
   // ---------- 状態 ----------
   let G = null, V = null, sel = null, busy = true, myDeck = 'himiko', cpuDeck = 'taishi', log = null;
-  const ME = 0, OP = 1;
+  let ME = 0, OP = 1; // 友達対戦では、2台で同じ試合を作るため B側は ME=1 になる
   const imgUrl = (d) => d.img.startsWith('face:') ? `img/face/${d.img.slice(5)}.webp` : `img/card/${d.img}.webp`;
   const isFace = (d) => d.img.startsWith('face:');
   const revealed = (uid) => V.resolving ? V.rev.has(uid) : G.S.cards[uid].revealed;
@@ -125,11 +125,12 @@
   function clearResume() { RES = null; store.set('resume', null); }
   function newGame(deckId, o) {
     o = o || {};
+    ME = o.me || 0; OP = 1 - ME;
     myDeck = deckId; const others = Object.keys(DECKS).filter(k => k !== deckId); cpuDeck = o.cpu || others[Math.floor(Math.random() * others.length)];
     const seed = o.seed || ((Math.random() * 1e9) | 0);
-    G = E.create({ seed, decks: [myDeck, cpuDeck], fixed: o.fixed, rules: o.rules });
-    G.S.mode = o.mode || 'cpu';
-    RES = { v: 1, deck: myDeck, cpu: cpuDeck, seed, o: { fixed: o.fixed, rules: o.rules, mode: o.mode || 'cpu', tut: !!o.tut, extra: o.extra || null }, turns: [] };
+    G = E.create({ seed, decks: ME === 0 ? [myDeck, cpuDeck] : [cpuDeck, myDeck], fixed: o.fixed, rules: o.rules });
+    G.S.mode = o.mode || 'cpu'; G.S.extra = o.extra || null; G.S.ruleName = o.rules && o.rules.name;
+    RES = { v: 1, me: ME, deck: myDeck, cpu: cpuDeck, seed, o: { fixed: o.fixed, rules: o.rules, mode: o.mode || 'cpu', tut: !!o.tut, extra: o.extra || null }, turns: [] };
     saveRes();
     V = { resolving: false, rev: new Set(), snap: G.snap(), hide: new Set(), oppShown: false, locShown: [false, false, false], disp: null };
     log = { combos: [] }; sel = null; busy = true;
@@ -137,23 +138,28 @@
     setTimeout(nextTurn, 500);
   }
   // 記録から試合を組み立てなおす（演出なし）
-  function rebuild(R) {
-    const g = E.create({ seed: R.seed, decks: [R.deck, R.cpu], fixed: R.o.fixed, rules: R.o.rules }); g.S.mode = R.o.mode;
-    for (const t of R.turns) {
+  // 2台で同じ結果になるように、いつも同じ順番（プレイヤー0→1）で組み立てる
+  function rebuild(R, partial) {
+    const me = R.me || 0, op = 1 - me;
+    const g = E.create({ seed: R.seed, decks: me === 0 ? [R.deck, R.cpu] : [R.cpu, R.deck], fixed: R.o.fixed, rules: R.o.rules }); g.S.mode = R.o.mode; g.S.extra = R.o.extra; g.S.ruleName = R.o.rules && R.o.rules.name;
+    R.turns.forEach((t, i) => {
       g.startTurn();
-      [[1, t.q], [0, t.p]].forEach(([pl, list]) => (list || []).forEach(([u, li]) => g.play(pl, u, li)));
-      if (t.d1) g.declare(1); if (t.d0) g.declare(0);
-      g.endTurn();
-    }
+      const by = { [me]: t.p || [], [op]: t.q || [] };
+      [0, 1].forEach(pl => by[pl].forEach(([u, li]) => g.play(pl, u, li)));
+      [0, 1].forEach(pl => { if ((pl === me ? t.d0 : t.d1)) g.declare(pl); });
+      if (g.S.fRetreat === undefined) { if (t.r0 && t.r1) g.S.fRetreat = 0; else if (t.r0) g.S.fRetreat = me; else if (t.r1) g.S.fRetreat = op; }
+      if (!(partial && i === R.turns.length - 1)) g.endTurn();
+    });
     return g;
   }
-  function resumeGame(R) {
+  function resumeGame(R, bt, bs) {
+    ME = R.me || 0; OP = 1 - ME;
     myDeck = R.deck; cpuDeck = R.cpu; RES = R;
     G = rebuild(R);
     V = { resolving: false, rev: new Set(), snap: G.snap(), hide: new Set(), oppShown: false, locShown: [0, 1, 2].map(li => G.S.turn >= li + 1), disp: null };
     log = { combos: [] }; sel = null; busy = true;
     show('game'); renderAll(); camera(-1, 1, 1, 10);
-    banner('つづきから', 'ターン' + (G.S.turn + 1) + 'から再開します', '', 1200);
+    banner(bt || 'つづきから', bs || 'ターン' + (G.S.turn + 1) + 'から再開します', '', 1400);
     setTimeout(nextTurn, 1400);
   }
 
@@ -199,8 +205,8 @@
     const od = DECKS[cpuDeck];
     const handN = G.S.players[OP].hand.filter(u => !V.hide.has(u)).length;
     $('#oppBar').innerHTML = `<div class="face" style="background-image:url('img/face/${od.face}.webp')"></div>
-      <div><div class="oname">${od.name}デッキ</div>${layout === 'land' ? `<div class="otheme">${od.theme}・${od.desc}（CPU）</div>` : ''}</div>
-      ${G.S.declaredBy === OP ? '<div class="tagbadge decl">天下取り宣言</div>' : ''}
+      <div><div class="oname">${od.name}デッキ</div>${layout === 'land' ? `<div class="otheme">${od.theme}・${od.desc}（${G.S.mode === 'friend' ? '友達' : 'CPU'}）</div>` : ''}</div>
+      ${G.S.declaredBy === OP ? '<div class="tagbadge decl">天下取り宣言</div>' : ''}${G.S.ruleName && layout === 'land' ? `<div class="tagbadge rule">${G.S.ruleName}</div>` : ''}
       <div class="ohand">${layout === 'land' ? '手札' : ''}<b>${handN}</b></div>`;
     $('#turnBox').innerHTML = `<div class="tn">ターン ${Math.max(1, G.S.turn)}<small> / 6</small></div><div class="stk">★+${G.S.stakes}/-${G.S.stakes / 2}</div>
       <button class="menu" data-act="menu" aria-label="メニュー"><i></i><i></i><i></i></button>`;
@@ -211,7 +217,7 @@
     for (let li = 0; li < 3; li++) {
       const L = G.loc(li), shown = V.locShown[li];
       const col = document.createElement('div'); col.className = 'loc'; col.dataset.li = li;
-      if (shown) { const t = V.snap.totals[li]; if (t[0] > t[1]) col.classList.add('lead-me'); else if (t[1] > t[0]) col.classList.add('lead-op'); }
+      if (shown) { const t = V.snap.totals[li]; if (t[ME] > t[OP]) col.classList.add('lead-me'); else if (t[OP] > t[ME]) col.classList.add('lead-op'); }
       const mk = (p) => {
         const cap = shown ? G.cap(li, p) : 4;
         const side = document.createElement('div'); side.className = 'side ' + (p === ME ? 'me' : 'opp');
@@ -236,9 +242,9 @@
       if (shown) {
         const t = V.snap.totals[li];
         tile.innerHTML = `<div class="timg" style="background-image:url('img/loc/${L.img}.webp')"></div><div class="tshade"></div>
-          <div class="tot o${t[1] > t[0] ? ' win' : ''}" data-tot="1">${t[1]}</div>
+          <div class="tot o${t[OP] > t[ME] ? ' win' : ''}" data-tot="${OP}">${t[OP]}</div>
           <div class="tname fit">${L.name}</div><div class="ttext fitb">${layout === 'port' ? L.short : L.text}</div>
-          <div class="tot m${t[0] > t[1] ? ' win' : ''}" data-tot="0">${t[0]}</div>`;
+          <div class="tot m${t[ME] > t[OP] ? ' win' : ''}" data-tot="${ME}">${t[ME]}</div>`;
       } else {
         tile.innerHTML = `<div class="timg"></div><div class="tq"><b>？</b><span>ターン${li + 1}で公開</span></div>`;
       }
@@ -458,6 +464,7 @@
       }
     }
     await cameraReset(350);
+    for (const e of ev) if (e.t === 'effect' && e.rule) { const el = cardNode(e.uid); if (el) { const c = centerOf(el); floatText(c.x, c.y - 10, e.text, 'plus'); el.classList.add('buff'); } }
     for (const e of ev) {
       if (e.p !== ME) continue;
       const orb = $('#ctrl .orb'), c = orb ? centerOf(orb) : { x: 640, y: 600 };
@@ -471,10 +478,13 @@
     await sleep(mine.length ? 450 : 0);
     // CPU（置き場所は伏せたまま、ターン終了で見せる）
     let dc = null;
+    const MODE = (window.RC_MODES || {})[G.S.mode];
     if (TUT()) TUT().cpu(G, OP);
-    else { E.cpuPlan(G, OP); dc = E.cpuDecide(G, OP); }
+    else if (MODE && MODE.cpu) MODE.cpu(G, OP);
+    else { E.cpuPlan(G, OP); dc = MODE && MODE.noDecide ? null : E.cpuDecide(G, OP); }
     if (dc === 'declare' && G.declare(OP)) { SE.play('shock'); await banner('天下取り宣言', '相手が勝負に出た！ 勝てば★+4、負けると★-2。撤退は3ターン目まで', '', 1600); }
     else if (dc === 'retreat') { G.retreat(OP); renderAll(); camera(-1, 0.96, 0.45, 900); return showResult(); }
+    V.handStart = G.S.players[ME].hand.slice();
     busy = false; V.snap = G.snap(); renderAll();
     if (TUT()) TUT().onTurn(G.S.turn);
   }
@@ -482,7 +492,17 @@
   async function endTurn() {
     if (busy) return;
     busy = true; sel = null; SE.play('decide');
-    if (RES) { const pl = (p) => G.S.pending[p].map(u => [u, G.S.cards[u].loc]); RES.turns.push({ p: pl(ME), q: pl(OP), d0: G.S.declaredBy === ME, d1: G.S.declaredBy === OP }); saveRes(); }
+    if (G.S.mode !== 'tut' && window.RC_META) G.S.pending[ME].forEach(u => { const d = CARDS[G.S.cards[u].id]; RC_META.track('play', { kind: d.kind, tags: d.tags }); });
+    const MODE = (window.RC_MODES || {})[G.S.mode];
+    const pl = (p) => G.S.pending[p].map(u => [u, G.S.cards[u].loc]);
+    let rec = { p: pl(ME), q: pl(OP), d0: G.S.declaredBy === ME, d1: G.S.declaredBy === OP, r0: !!G.S.myRetreatReq };
+    // 友達対戦：音で相手の手を受け取る
+    if (MODE && MODE.exchange) { const r = await MODE.exchange(G, ME, rec, V.handStart); if (!r) { busy = false; renderCtrl(); return; } rec.q = r.plays; rec.d1 = r.decl; rec.r1 = !!r.retreat; }
+    if (RES) {
+      RES.turns.push(rec); saveRes();
+      // 記録から組み立てなおして、毎回同じ順番で解決する（2台対戦・再開で結果がずれないように）
+      const hide = V.hide; G = rebuild(RES, true); V.snap = G.snap(); V.hide = hide;
+    }
     // 相手の伏せカードを見せる
     const oppNew = G.S.pending[OP].slice();
     V.oppShown = true; renderAll();
@@ -764,7 +784,8 @@
       case 'declare':
         if (!busy && G.canDeclare(ME)) openConfirm('天下取り宣言しますか？', '勝てば<b>★+4</b>、負ければ<b>★-2</b>になります。<br>宣言すると、この試合ではもう撤退できません。', '宣言する', () => { G.declare(ME); SE.play('cheer'); renderAll(); banner('天下取り宣言', '勝てば★+4！ もう逃げない', '', 1100); }, 'blue');
         break;
-      case 'retreat': if (!busy && G.canRetreat(ME)) openConfirm('撤退しますか？', '<b>★を減らさずに</b>負けて、この試合を終わります。<br>（ふつうに負けると★-1、宣言されて負けると★-2）', '撤退する', () => { G.retreat(ME); SE.play('ko'); renderAll(); camera(-1, 0.96, 0.45, 900); showResult(); }); break;
+      case 'retreat': if (G.S.mode === 'friend') { if (!busy && G.S.turn <= 3 && !G.S.fRetreat && G.S.declaredBy !== ME) openConfirm('撤退しますか？', '友達対戦では、撤退しても試合は最後まで続きます。<br>勝ち負けは<b>あなたの負け</b>で決まり、★は減りません。', '撤退する', () => { G.S.myRetreatReq = true; SE.play('ko'); banner('撤退', 'ターン終了で相手に伝わります', '', 1200); }); break; }
+        if (!busy && G.canRetreat(ME)) openConfirm('撤退しますか？', '<b>★を減らさずに</b>負けて、この試合を終わります。<br>（ふつうに負けると★-1、宣言されて負けると★-2）', '撤退する', () => { G.retreat(ME); SE.play('ko'); renderAll(); camera(-1, 0.96, 0.45, 900); showResult(); }); break;
       case 'menu': openMenu(); break;
       case 'closeModal': SE.play('tap'); closeModal(); break;
       case 'again': SE.play('decide'); closeModal(); newGame(myDeck); break;
@@ -912,8 +933,12 @@
   }
   async function showResult() {
     busy = true; renderCtrl(); clearResume();
+    if (G.S.fRetreat !== undefined && G.S.over) { G.S.over.winner = 1 - G.S.fRetreat; G.S.over.retreat = G.S.fRetreat; }
     if (TUT()) return TUT().onEnd();
-    if (G.S.over.winner >= 0 && !(window.RC_META && RC_META.skipVictory)) { const wp = G.S.over.winner; await victoryScene(wp === ME ? myDeck : cpuDeck, wp === ME ? cpuDeck : myDeck, wp); }
+    if (G.S.over.winner >= 0) { const wp = G.S.over.winner; await victoryScene(wp === ME ? myDeck : cpuDeck, wp === ME ? cpuDeck : myDeck, wp); }
+    RC_META.track('game', { mode: G.S.mode, win: G.S.over.winner === ME, deck: myDeck, maxPow: Math.max(...[0, 1, 2].map(li => G.total(li, ME))), combos: log.combos.filter(c => !c.opp).length });
+    const MODE = (window.RC_MODES || {})[G.S.mode];
+    if (MODE && MODE.onEnd) return MODE.onEnd(G, ME, { myDeck, cpuDeck, combos: log.combos });
     const r = G.S.over;
     const win = r.winner === ME, draw = r.winner < 0;
     const X = RC_META.applyResult(r, ME);
@@ -950,5 +975,5 @@
   stage.classList.add(layout); fitStage(); applyLabels();
   // テスト用（自動確認ツールから使う）と、meta.js から使う部品
   window.RC_UI = { get G() { return G; }, newGame, endTurn, doPlay, action, get busy() { return busy; }, fast(v) { SPEED = v ? 0.03 : 1; }, resumeGame, clearResume, rebuild, get isFast() { return SPEED < 1; }, cardNode: (u) => cardNode(u), get sel() { return sel; },
-    x: { showResult, store, SE, show, openModal, closeModal, openConfirm, fitAll, banner, sleep, setGame(v) { G = v; }, openZukanDeck, get layout() { return layout; } } };
+    x: { get ME() { return ME; }, get G() { return G; }, get myDeck() { return myDeck; }, get cpuDeck() { return cpuDeck; }, showResult, store, SE, show, openModal, closeModal, openConfirm, fitAll, banner, sleep, setGame(v) { G = v; }, openZukanDeck, get layout() { return layout; } } };
 })();

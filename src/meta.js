@@ -1,7 +1,7 @@
 // 歴史カードバトル：タイトル演出・メニュー・セーブ・コイン・ショップ・ランク・BGM
 (function () {
   const U = window.RC_UI.x;
-  const { DECKS } = window.RC_DATA;
+  const { DECKS, CARDS } = window.RC_DATA;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const IMG = (p) => (window.RC_IMG && window.RC_IMG[p]) || p;
@@ -43,7 +43,8 @@
       <div class="rk pvp"><div class="em" style="background-image:url('${p.img}')"></div>
         <div class="rt"><div class="rl">対人ランク</div><div class="rn">${p.name}</div>${bar(p)}<div class="rs">2台対戦で上がる</div></div></div>
       <div class="coin-box"><div class="ci"></div><b id="coinNum">${SV.coins}</b></div>
-      <div class="name-plate"><small>なまえ</small><b>${SV.name || '－'}</b></div>`;
+      <div class="name-plate"><small>なまえ</small><b>${SV.name || '－'}</b></div>
+      ${SV.daily ? `<button class="daily-chip${dailyReady() ? ' ready' : ''}" data-act="daily"><b>デイリー</b><span>${SV.daily.list.filter(m => m.prog >= m.goal).length} / 3</span>${dailyReady() ? '<i>!</i>' : ''}</button>` : ''}`;
   }
   function renderHud() { $$('.hud').forEach(h => h.innerHTML = hudHtml()); }
 
@@ -72,7 +73,7 @@
   // ---------- 画面ごとの処理 ----------
   function onShow(id) {
     stage.classList.toggle('on-title', id === 'title');
-    if (id === 'title' || id === 'starter' || id === 'deck') BGM.play('menu');
+    if (id === 'title' || id === 'starter' || id === 'deck' || id === 'camp' || id === 'puzzle') BGM.play('menu');
     if (id === 'shop' || id === 'zukan' || id === 'zlist') BGM.play('shop');
     if (id === 'game') BGM.play('battle');
     if (id === 'title' || id === 'shop') renderHud();
@@ -146,8 +147,10 @@
   function openMenu() {
     const T = $('#title'); applyBg();
     T.classList.add('ready', 'menu'); T.classList.remove('seq');
+    if (SV.started) refreshDaily();
     renderHud();
     if (!SV.started) setTimeout(firstRun, 500);
+    else setTimeout(() => { if (!$('#modal.on')) checkResume(); }, 400);
   }
   function toMenu() { U.closeModal(); U.setGame(null); U.show('title'); openMenu(); }
 
@@ -346,6 +349,91 @@
     });
   }
 
+  // ---------- デイリーミッション（1つ50コイン・全部で+50） ----------
+  const KINDN = { reveal: '公開時', ongoing: '永続', prophecy: '予言', combo: '史実コンボ' };
+  function ownedCards() { return SV.owned.flatMap(id => DECKS[id].cards.map(c => CARDS[c])); }
+  function missionPool() {
+    const oc = ownedCards(), pool = [];
+    const rnd = (a) => a[Math.floor(Math.random() * a.length)];
+    pool.push({ id: 'play1', t: 'CPUと1回対戦する', goal: 1 });
+    pool.push({ id: 'win1', t: 'CPU戦で1回勝つ', goal: 1 });
+    ['reveal', 'ongoing'].forEach(k => { if (oc.some(c => c.kind === k)) pool.push({ id: 'kind_' + k, t: `${KINDN[k]}のカードを3枚出す`, goal: 3, k }); });
+    const tags = [...new Set(oc.flatMap(c => c.tags))]; const tg = rnd(tags);
+    pool.push({ id: 'tag', t: `「${tg}」のカードを4枚出す`, goal: 4, tag: tg });
+    pool.push({ id: 'pow10', t: '1つの場所でパワー10以上にする', goal: 1 });
+    pool.push({ id: 'combo1', t: '史実コンボを1回決める', goal: 1 });
+    const dk = rnd(SV.owned); pool.push({ id: 'deck', t: `${DECKS[dk].name}デッキで1回対戦する`, goal: 1, deck: dk });
+    pool.push({ id: 'puzzle1', t: '歴史パズルを1問クリアする', goal: 1 });
+    return pool;
+  }
+  function refreshDaily() {
+    const day = today(); if (SV.daily && SV.daily.day === day) return;
+    const pool = missionPool().sort(() => Math.random() - 0.5);
+    const list = [pool.find(m => m.id === 'play1')].concat(pool.filter(m => m.id !== 'play1').slice(0, 2));
+    SV.daily = { day, list: list.map(m => Object.assign(m, { prog: 0, got: false })), bonus: false }; save();
+  }
+  // 試合の中のできごとを記録（ui.js から呼ぶ）
+  function track(ev, d) {
+    if (!SV.daily) return; let ch = false;
+    SV.daily.list.forEach(m => {
+      if (m.prog >= m.goal) return; let add = 0;
+      if (ev === 'play') { if (m.k && d.kind === m.k) add = 1; if (m.tag && d.tags.includes(m.tag)) add = 1; }
+      if (ev === 'game') { if (m.id === 'play1' && (d.mode === 'cpu' || d.mode === 'camp')) add = 1; if (m.id === 'win1' && (d.mode === 'cpu' || d.mode === 'camp') && d.win) add = 1; if (m.id === 'pow10' && d.maxPow >= 10) add = 1; if (m.id === 'combo1' && d.combos > 0) add = 1; if (m.id === 'deck' && d.deck === m.deck) add = 1; }
+      if (ev === 'puzzle' && m.id === 'puzzle1') add = 1;
+      if (add) { m.prog = Math.min(m.goal, m.prog + add); ch = true; }
+    });
+    if (ch) save();
+  }
+  const dailyReady = () => SV.daily ? SV.daily.list.filter(m => m.prog >= m.goal && !m.got).length + (SV.daily.list.every(m => m.got) && !SV.daily.bonus ? 1 : 0) : 0;
+  function openDaily() {
+    refreshDaily(); const D = SV.daily, all = D.list.every(m => m.got);
+    U.openModal(`<div class="mtitle">デイリーミッション</div>
+      <div class="mbody daily">${D.list.map((m, i) => `<div class="dm${m.got ? ' got' : m.prog >= m.goal ? ' ok' : ''}"><div class="dm-t">${m.t}</div>
+        <div class="dm-g"><div class="gauge"><i style="width:${m.prog / m.goal * 100}%"></i></div><span>${m.prog} / ${m.goal}</span></div>
+        ${m.got ? '<div class="dm-b done">受け取りずみ</div>' : m.prog >= m.goal ? `<button class="btn gold dm-b" data-dm="${i}"><span class="ci-inline"></span>50 うけとる</button>` : '<div class="dm-b"><span class="ci-inline"></span>50</div>'}</div>`).join('')}
+        <div class="dm bonus${D.bonus ? ' got' : all ? ' ok' : ''}"><div class="dm-t">3つぜんぶ達成ボーナス</div>${D.bonus ? '<div class="dm-b done">受け取りずみ</div>' : all ? '<button class="btn gold dm-b" data-dm="b"><span class="ci-inline"></span>50 うけとる</button>' : '<div class="dm-b"><span class="ci-inline"></span>50</div>'}</div>
+        <div class="dm-note">毎日あたらしいミッションに変わります（1日 最大200コイン）</div></div>
+      <div class="mbtns"><button class="btn gold" data-act="closeModal">とじる</button></div>`, openDaily);
+    document.querySelectorAll('[data-dm]').forEach(b => b.onclick = (e) => {
+      e.stopPropagation(); const k = b.dataset.dm, from = SV.coins;
+      if (k === 'b') D.bonus = true; else D.list[+k].got = true;
+      SV.coins += 50; save(); U.SE.play('cheer', 0.8); renderHud(); countCoins(from, SV.coins); coinBurst(b); openDaily();
+    });
+  }
+  function coinBurst(b) {
+    const sr = $('#stage').getBoundingClientRect(), k = sr.width / $('#stage').offsetWidth, r = b.getBoundingClientRect();
+    for (let i = 0; i < 10; i++) { const c = document.createElement('div'); c.className = 'cburst'; c.style.left = ((r.left + r.width / 2 - sr.left) / k) + 'px'; c.style.top = ((r.top - sr.top) / k) + 'px';
+      c.style.setProperty('--x', (Math.random() * 200 - 100) + 'px'); c.style.setProperty('--y', (-60 - Math.random() * 120) + 'px'); c.style.animationDelay = (i * 0.03) + 's'; $('#stage').appendChild(c); setTimeout(() => c.remove(), 1000); }
+  }
+
+  // ---------- 対戦モードえらび ----------
+  let deckFor = null;
+  function openModes() {
+    const M = (act, t, sub, cls) => `<button class="mode ${cls || ''}" data-act="${act}"><b>${t}</b><span>${sub}</span></button>`;
+    U.openModal(`<div class="mtitle">対戦</div><div class="mbody modes">
+      ${M('modeCpu', 'CPUと対戦', 'デッキをえらんで勝負。CPUランクが上がる', 'gold')}${M('modeCamp', '時代めぐり', '時代ごとの特別ルールで戦う')}
+      ${M('modePuzzle', '歴史パズル', '決まった場面から勝ちを考える')}${M('modeFriend', '友達と対戦', '2台で音を使って対戦。対人ランクが上がる')}</div>
+      <div class="mbtns"><button class="btn" data-act="closeModal">もどる</button></div>`, openModes);
+  }
+  function openDeckFor(purpose, head, cb) {
+    deckFor = { purpose, cb }; U.closeModal(); U.show('deck'); $('#deck .deck-head').textContent = head || 'デッキをえらぶ'; renderDeckList();
+  }
+
+  // ---------- 試合のつづき ----------
+  function checkResume() {
+    const R = U.store.get('resume', null);
+    if (!R || !R.turns || R.v !== 1) return false;
+    U.openModal(`<div class="mtitle">試合のつづき</div><div class="mbody fitb" style="text-align:center">前に遊んでいた試合が残っています。<br><b>${DECKS[R.deck].name}デッキ</b>（ターン${R.turns.length + 1}から）<br>つづきから遊びますか？<br><small>やめると、その試合は放棄されます（★・コインは変わりません）</small></div>
+      <div class="mbtns"><button class="btn red" id="rsNo">放棄する</button><button class="btn gold" id="rsYes">つづける</button></div>`);
+    $('#rsNo').onclick = () => { U.SE.play('tap'); window.RC_UI.clearResume(); U.closeModal(); };
+    $('#rsYes').onclick = () => { U.SE.play('decide'); U.closeModal(); resumeByMode(R); };
+    return true;
+  }
+  function resumeByMode(R) {
+    if (R.o.mode === 'friend' && window.RC_FRIEND) return window.RC_FRIEND.resume(R);
+    window.RC_UI.resumeGame(R);
+  }
+
   // ---------- 名前（ひらがなとー、1〜8文字） ----------
   const KANA = ['あいうえお', 'かきくけこ', 'さしすせそ', 'たちつてと', 'なにぬねの', 'はひふへほ', 'まみむめも', 'や　ゆ　よ', 'らりるれろ', 'わ　を　ん'];
   const DAKU = { 'か': 'が', 'き': 'ぎ', 'く': 'ぐ', 'け': 'げ', 'こ': 'ご', 'さ': 'ざ', 'し': 'じ', 'す': 'ず', 'せ': 'ぜ', 'そ': 'ぞ', 'た': 'だ', 'ち': 'ぢ', 'つ': 'づ', 'て': 'で', 'と': 'ど', 'は': 'ば', 'ひ': 'び', 'ふ': 'ぶ', 'へ': 'べ', 'ほ': 'ぼ', 'う': 'ゔ' };
@@ -438,7 +526,7 @@
     const B = (id, t, c) => `<button class="btn ${c || ''}" data-dbg="${id}">${t}</button>`;
     U.openModal(`<div class="mtitle">デバッグモード</div>
       <div class="mbody dbg"><div class="dbg-st">コイン ${SV.coins}　CPU ★${SV.cpu}（${rankInfo(SV.cpu).name}）　デッキ ${owned().length}/19</div>
-      <div class="dbg-grid">${B('coin', 'コイン +1000', 'gold')}${B('all', '全デッキ入手', 'gold')}${B('up', 'CPU ★+5')}${B('down', 'CPU ★-5')}${B('max', 'ランク最高')}${B('zero', 'ランク0')}${B('shop', 'ショップ入れかえ')}${B('fast', window.RC_UI.isFast ? '早送り オフ' : '早送り オン')}${B('reset', 'セーブを消す', 'red')}${B('close', 'とじる')}</div>
+      <div class="dbg-grid">${B('coin', 'コイン +1000', 'gold')}${B('all', '全デッキ入手', 'gold')}${B('up', 'CPU ★+5')}${B('down', 'CPU ★-5')}${B('max', 'ランク最高')}${B('zero', 'ランク0')}${B('shop', 'ショップ入れかえ')}${B('fast', window.RC_UI.isFast ? '早送り オフ' : '早送り オン')}${B('trans', '引き継ぎQR')}${B('reset', 'セーブを消す', 'red')}${B('close', 'とじる')}</div>
       <div class="dbg-msg">${msg || ''}</div></div>`, () => openDebug(msg));
     document.querySelectorAll('[data-dbg]').forEach(b => b.onclick = (e) => {
       e.stopPropagation(); U.SE.play('tap'); const k = b.dataset.dbg; let m = '';
@@ -451,6 +539,7 @@
       if (k === 'shop') { SV.shop.day = ''; refreshStock(); m = 'ショップを入れかえた'; }
       if (k === 'fast') { window.RC_UI.fast(!window.RC_UI.isFast); m = window.RC_UI.isFast ? '演出を早送りにした' : '早送りをやめた'; }
       if (k === 'close') { U.closeModal(); renderHud(); return; }
+      if (k === 'trans') { window.RC_FRIEND.openTransfer(); return; }
       if (k === 'reset') { U.openConfirm('セーブを消しますか？', 'コイン・デッキ・ランクがすべて最初にもどります。', '消す', () => { U.store.set(SAVE_KEY, null); SV = load(); location.reload(); }, 'red'); return; }
       save(); renderHud(); openDebug(m);
     });
@@ -460,6 +549,13 @@
   function action(act, el) {
     switch (act) {
       case 'shop': U.SE.play('decide'); openShop(); return true;
+      case 'daily': U.SE.play('decide'); openDaily(); return true;
+      case 'toDeck': U.SE.play('decide'); openModes(); return true;
+      case 'modeCpu': U.SE.play('decide'); deckFor = null; U.closeModal(); U.show('deck'); $('#deck .deck-head').textContent = 'デッキをえらぶ（CPUと対戦）'; renderDeckList(); return true;
+      case 'modeCamp': U.SE.play('decide'); U.closeModal(); if (window.RC_CAMP) window.RC_CAMP.open(); return true;
+      case 'modePuzzle': U.SE.play('decide'); U.closeModal(); if (window.RC_PUZZLE) window.RC_PUZZLE.open(); return true;
+      case 'modeFriend': U.SE.play('decide'); U.closeModal(); if (window.RC_FRIEND) window.RC_FRIEND.open(); return true;
+      case 'pickDeck': if (!deckFor) return false; { const f = deckFor; deckFor = null; U.SE.play('decide'); f.cb(el.dataset.deck); } return true;
       case 'shopBuy': buy(el.dataset.deck); return true;
       case 'shopView': U.SE.play('tap'); U.openZukanDeck(el.dataset.deck, 'shop'); return true;
       case 'pickStarter': U.SE.play('tap'); pickStarter(el.dataset.deck); return true;
@@ -475,6 +571,6 @@
     if ($('#starter').classList.contains('on')) openStarter();
     renderHud(); U.fitAll();
   }, 60));
-  window.RC_META = { playerName: () => SV.name || '－', openNameInput, openBgPicker, applyBg, openDebug, openStarter, boot, onShow, action, toMenu, openMenu, openShop, openZList, renderDeckList, applyResult, resultHtml, animateResult, owned, isOwned, rankInfo, BGM, get save() { return SV; }, markTutorial() { SV.tutorial = true; save(); }, reset() { U.store.set(SAVE_KEY, null); SV = load(); } };
+  window.RC_META = { track, refreshDaily, openDeckFor, renderHud, get SV() { return SV; }, saveNow: () => save(), countCoins, playerName: () => SV.name || '－', openNameInput, openBgPicker, applyBg, openDebug, openStarter, boot, onShow, action, toMenu, openMenu, openShop, openZList, renderDeckList, applyResult, resultHtml, animateResult, owned, isOwned, rankInfo, BGM, get save() { return SV; }, markTutorial() { SV.tutorial = true; save(); }, reset() { U.store.set(SAVE_KEY, null); SV = load(); } };
   boot();
 })();

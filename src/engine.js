@@ -57,7 +57,9 @@
       if (p !== undefined) n -= activeOngoing(1 - p, 'blockSlot').filter(u => S.cards[u].loc === li).length;
       return Math.max(1, n);
     }
-    const isProtected = (uid) => { const c = S.cards[uid]; return c.loc >= 0 && activeOngoing(c.owner, 'protectHere').some(u => S.cards[u].loc === c.loc); };
+    // 時代めぐりの特殊ルール（opt.rules = { id, boss:{p, card} }）
+    const RULE = (opt.rules && opt.rules.id) || '';
+    const isProtected = (uid) => { const c = S.cards[uid]; if (RULE === 'sakoku' && c.loc === 1) return true; return c.loc >= 0 && activeOngoing(c.owner, 'protectHere').some(u => S.cards[u].loc === c.loc); };
     const targetsAt = (li, p) => revealedAt(li, p).filter(u => !isProtected(u)); // 相手の効果の対象にできるカード
 
     function costOf(uid) {
@@ -74,11 +76,12 @@
     function locBonus(uid) {
       const c = S.cards[uid], d = def(uid), L = loc(c.loc);
       if (!L.amount) return 0;
-      if (L.tag && d.tags.includes(L.tag)) return L.amount;
-      if (L.kind && d.kind === L.kind) return L.amount;
-      if (L.costEq && d.cost === L.costEq) return L.amount;
-      if (L.costGte && d.cost >= L.costGte) return L.amount;
-      if (L.drawer && d.fx === 'draw') return L.amount;
+      const a = L.amount * (RULE === 'ritsuryo' ? 2 : 1);
+      if (L.tag && d.tags.includes(L.tag)) return a;
+      if (L.kind && d.kind === L.kind) return a;
+      if (L.costEq && d.cost === L.costEq) return a;
+      if (L.costGte && d.cost >= L.costGte) return a;
+      if (L.drawer && d.fx === 'draw') return a;
       return 0;
     }
     function power(uid) {
@@ -103,6 +106,10 @@
         if (d.fx === 'perOngoing') v += mine.filter(u => u !== uid && def(u).kind === 'ongoing').length * d.amount;
       }
       if (comboOn(uid)) v += d.amount;
+      if (RULE === 'kokufu') { if (d.tags.includes('文化')) v += 1; if (d.tags.includes('戦い')) v -= 1; }
+      if (RULE === 'goon' && revealedAt(c.loc, p).length >= 3) v += 1;
+      if (RULE === 'gekokujo' && d.cost <= 2) v += 2;
+      if (opt.rules && opt.rules.boss && opt.rules.boss.p === p && c.id === opt.rules.boss.card) v += 3;
       return Math.max(0, v);
     }
     function total(li, p) { return revealedAt(li, p).reduce((a, u) => a + power(u), 0); }
@@ -135,8 +142,10 @@
         P.costUp = P.costUpNext; P.costUpNext = 0;
         if (P.energyBonus) ev.push({ t: 'ramp', p, amount: P.energyBonus });
         if (P.costUp) ev.push({ t: 'costUp', p, amount: P.costUp });
-        drawCards(p, S.turn === 1 ? 4 : 1, ev);
+        drawCards(p, (S.turn === 1 ? 4 : 1) + (RULE === 'bunmei' && S.turn > 1 ? 1 : 0), ev);
       }
+      // 豊作：毎ターン、場のいちばん弱いカードに+1
+      if (RULE === 'hosaku' && S.turn > 1) for (let p = 0; p < 2; p++) { const all = allRevealed(p); if (all.length) { const w = all.reduce((a, u) => power(u) < power(a) ? u : a); S.cards[w].bonus += 1; ev.push({ t: 'effect', uid: w, p, targets: [w], delta: 1, text: '豊作 +1', rule: true }); } }
       S.pending = [[], []];
       return ev;
     }

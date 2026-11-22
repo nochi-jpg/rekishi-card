@@ -9,7 +9,7 @@ def b64(path):
     return base64.b64encode(open(path, 'rb').read()).decode()
 
 css = open('src/style.css', encoding='utf-8').read()
-js = ''.join(open(p, encoding='utf-8').read() + '\n' for p in ['lib/se.js', 'src/data.js', 'src/engine.js', 'src/ui.js', 'src/meta.js', 'src/tutorial.js', 'src/lines.js'])
+js = ''.join(';' + open(p, encoding='utf-8').read() + '\n;\n' for p in ['lib/se.js', 'src/data.js', 'src/engine.js', 'src/ui.js', 'src/meta.js', 'src/tutorial.js', 'src/lines.js', 'src/camp.js', 'src/puzzles.js', 'src/puzzle.js', 'lib/ggwave.js', 'lib/jsQR.min.js', 'lib/qrcode.min.js', 'src/friend.js'])
 html = open('index.html', encoding='utf-8').read()
 
 # フォントを使う文字だけにしぼる

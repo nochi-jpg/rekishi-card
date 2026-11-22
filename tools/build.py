@@ -9,7 +9,7 @@ def b64(path):
     return base64.b64encode(open(path, 'rb').read()).decode()
 
 css = open('src/style.css', encoding='utf-8').read()
-js = ''.join(open(p, encoding='utf-8').read() + '\n' for p in ['lib/se.js', 'src/data.js', 'src/engine.js', 'src/ui.js'])
+js = ''.join(open(p, encoding='utf-8').read() + '\n' for p in ['lib/se.js', 'src/data.js', 'src/engine.js', 'src/ui.js', 'src/meta.js', 'src/tutorial.js'])
 html = open('index.html', encoding='utf-8').read()
 
 # フォントを使う文字だけにしぼる
@@ -28,11 +28,14 @@ css = css.replace("url('../fonts/ZenKakuGothicNew-Black.ttf')", f"url(data:font/
 
 # 画像：CSSの url('../img/...') と JSの `img/...` を置きかえる
 imgs = {}
-for d in ['card', 'face', 'loc']:
+for d in ['card', 'face', 'loc', 'ui', 'rank', 'tut']:
     for f in os.listdir(f'img/{d}'):
         imgs[f'img/{d}/{f}'] = 'data:image/webp;base64,' + b64(f'img/{d}/{f}')
 css = re.sub(r"url\('\.\./(img/[^']+)'\)", lambda m: f"url('{imgs[m.group(1)]}')", css)
 img_js = 'window.RC_IMG=' + repr(imgs).replace("'", '"') + ';\n'
+import json
+bgm = {n[:-4]: 'data:audio/ogg;base64,' + b64('bgm/' + n) for n in sorted(os.listdir('bgm')) if n.endswith('.ogg')}
+img_js += 'window.RC_BGMDATA=' + json.dumps(bgm) + ';\n'
 js = img_js + js
 # JSの中の画像パスは RC_IMG から引く
 js = js.replace("const imgUrl = (d) => d.img.startsWith('face:') ? `img/face/${d.img.slice(5)}.webp` : `img/card/${d.img}.webp`;",

@@ -10,22 +10,49 @@
 <canvas id="bgfx"></canvas>
 <div id="stage" class="land">
 
-  <!-- タイトル -->
+  <!-- はじめのタップ（音を出すために必要） -->
+  <section id="boot" class="screen">
+    <div class="boot-in">
+      <div class="boot-ring"></div>
+      <div class="boot-msg">画面をタップしてください</div>
+      <div class="boot-sub">音が出ます</div>
+    </div>
+  </section>
+
+  <!-- タイトル・メニュー -->
   <section id="title" class="screen">
-    <div class="title-bg"></div>
-    <div class="logo">
-      <div class="logo-sub">HISTORIA CARD BATTLE</div>
-      <div class="logo-main"><span>歴史</span><span>カードバトル</span></div>
-      <div class="logo-line"></div>
+    <div class="tt-view"><div class="tt-img"></div></div>
+    <div class="tt-shade"></div>
+    <div class="tt-petals" id="petals"></div>
+    <div class="tt-white"></div>
+    <div class="tt-logo"></div>
+    <div class="tt-press">画面をタップしてスタート</div>
+    <div class="tt-menu">
+      <div class="hud" id="menuHud"></div>
+      <div class="mm-list">
+        <button class="mm gold" data-act="toDeck"><b>対戦</b><span>CPUと勝負する</span></button>
+        <button class="mm" data-act="shop"><b>ショップ</b><span>デッキを手に入れる</span></button>
+        <button class="mm" data-act="zukan"><b>カード図鑑</b><span>集めたカードを見る</span></button>
+        <button class="mm" data-act="howto"><b>あそびかた</b><span>ルールを読む</span></button>
+        <button class="mm" data-act="settings"><b>設定</b><span>音・表示</span></button>
+      </div>
     </div>
-    <div class="title-btns">
-      <button class="btn gold big" data-act="toDeck">対戦する</button>
-      <button class="btn big" data-act="zukan">カード図鑑</button>
-      <button class="btn big" data-act="howto">あそびかた</button>
-      <button class="btn big" data-act="settings">設定</button>
-    </div>
-    <div class="title-rank" id="titleRank"></div>
-    <div class="title-foot">テスト版 v0.4　K.nom</div>
+    <div class="title-foot">テスト版 v0.5　K.nom</div>
+  </section>
+
+  <!-- 最初のデッキ -->
+  <section id="starter" class="screen">
+    <div class="title-bg dim"></div>
+    <div class="st-head">最初のデッキをえらぼう</div>
+    <div class="st-sub">1つを無料で手に入れられる。ほかのデッキはショップで買える</div>
+    <div class="st-list" id="starterList"></div>
+  </section>
+
+  <!-- ショップ -->
+  <section id="shop" class="screen">
+    <div class="title-bg dim"></div>
+    <div class="sp-head panel" id="shopHead"></div>
+    <div class="sp-grid" id="shopGrid"></div>
   </section>
 
   <!-- デッキえらび -->
@@ -35,11 +62,22 @@
     <div class="deck-list" id="deckList"></div>
     <div class="deck-foot">
       <button class="btn" data-act="toTitle">もどる</button>
-      <button class="btn" data-act="zukan">カード図鑑</button>
+      <button class="btn" data-act="shop">ショップ</button>
     </div>
   </section>
 
-  <!-- カード図鑑 -->
+  <!-- カード図鑑：デッキの一覧 -->
+  <section id="zlist" class="screen">
+    <div class="title-bg dim"></div>
+    <div class="deck-head">カード図鑑</div>
+    <div class="deck-list" id="zlistList"></div>
+    <div class="deck-foot">
+      <button class="btn" data-act="toTitle">もどる</button>
+      <button class="btn" data-act="shop">ショップ</button>
+    </div>
+  </section>
+
+  <!-- カード図鑑：カード -->
   <section id="zukan" class="screen">
     <div class="title-bg dim"></div>
     <div id="zkTop" class="panel"></div>
@@ -66,5 +104,7 @@
 <script src="src/data.js"></script>
 <script src="src/engine.js"></script>
 <script src="src/ui.js"></script>
+<script src="src/meta.js"></script>
+<script src="src/tutorial.js"></script>
 </body>
 </html>

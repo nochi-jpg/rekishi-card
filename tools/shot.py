@@ -24,6 +24,7 @@ CHECK = r'''() => {
     if (!vis(el)) return; const lh = parseFloat(getComputedStyle(el).lineHeight) || parseFloat(getComputedStyle(el).fontSize) * 1.3;
     if (el.tagName === 'SPAN' && el.getBoundingClientRect().height > lh * 1.6) bad.push('折り返し: ' + el.textContent);
     if (el.scrollWidth > el.clientWidth + 1) bad.push('ボタンからはみ出し: ' + el.textContent.trim());
+    if (el.tagName !== 'SPAN' && !el.querySelector('span,small,b,i,div,img')) { const r = document.createRange(); r.selectNodeContents(el); if (r.getClientRects().length > 1 && r.getBoundingClientRect().height > lh * 1.6) bad.push('折り返し: ' + el.textContent.trim()); }
   });
   // ボタン・カードが画面外に出ていないか
   document.querySelectorAll('.screen.on .btn, .screen.on .card, #modal.on .btn, .screen.on .tile, .screen.on .panel').forEach(el => {
@@ -53,7 +54,13 @@ async def main():
             pg = await ctx.new_page()
             errs = []
             pg.on('pageerror', lambda e: errs.append(str(e)))
-            await pg.goto(URL); await pg.wait_for_timeout(900)
+            await ctx.add_init_script("""try { if (!localStorage.getItem('rekishicard_save')) localStorage.setItem('rekishicard_save', JSON.stringify({v:1, owned:['himiko','taishi','yoritomo','nobunaga','iemitsu','shomu','michinaga','saigo'], coins:430, cpu:13, pvp:3, started:true, tutorial:true, shop:{day:'',stock:[]}, seed:7, wins:0, games:0})); } catch(e){}""")
+            await pg.goto(URL); await pg.wait_for_timeout(500)
+            await pg.click('#boot'); await pg.wait_for_timeout(1200)
+            await pg.screenshot(path=f'{OUT}/{name}_0seq.png')
+            await pg.click('#title'); await pg.wait_for_timeout(1400)
+            await pg.screenshot(path=f'{OUT}/{name}_0press.png'); allbad[name+'_press'] = await pg.evaluate(CHECK)
+            await pg.click('#title'); await pg.wait_for_timeout(1000)
             await pg.screenshot(path=f'{OUT}/{name}_1title.png'); allbad[name+'_title'] = await pg.evaluate(CHECK)
             await pg.evaluate("RC_UI.action('settings')"); await pg.wait_for_timeout(500)
             await pg.screenshot(path=f'{OUT}/{name}_1settings.png'); allbad[name+'_settings'] = await pg.evaluate(CHECK)
@@ -61,9 +68,13 @@ async def main():
             await pg.evaluate("RC_UI.action('howto')"); await pg.wait_for_timeout(500)
             await pg.screenshot(path=f'{OUT}/{name}_1howto0.png'); allbad[name+'_howto0'] = await pg.evaluate(CHECK)
             await pg.evaluate("RC_UI.action('closeModal')")
+            await pg.evaluate("RC_UI.action('shop')"); await pg.wait_for_timeout(900)
+            await pg.screenshot(path=f'{OUT}/{name}_1shop.png'); allbad[name+'_shop'] = await pg.evaluate(CHECK)
             await pg.evaluate("RC_UI.action('toDeck')"); await pg.wait_for_timeout(600)
             await pg.screenshot(path=f'{OUT}/{name}_2deck.png'); allbad[name+'_deck'] = await pg.evaluate(CHECK)
             await pg.evaluate("RC_UI.action('zukan')"); await pg.wait_for_timeout(500)
+            await pg.screenshot(path=f'{OUT}/{name}_2zlist.png'); allbad[name+'_zlist'] = await pg.evaluate(CHECK)
+            await pg.evaluate("RC_UI.action('zkOpen', document.querySelector('[data-act=zkOpen]'))"); await pg.wait_for_timeout(500)
             await pg.screenshot(path=f'{OUT}/{name}_2zukan.png'); allbad[name+'_zukan'] = await pg.evaluate(CHECK)
             for k in range(19):
                 await pg.evaluate("RC_UI.action('zkNext')"); await pg.wait_for_timeout(60)

@@ -28,6 +28,9 @@
     opt.decks.forEach((deckId, p) => {
       const deck = DECKS[deckId].cards.map((cid, i) => newCard(cid, p, 'p' + p + '_' + i + '_' + cid));
       shuffle(deck);
+      // チュートリアル用：山札の上から決まった順に並べる
+      const fo = opt.fixed && opt.fixed.order && opt.fixed.order[p];
+      if (fo) { const top = []; fo.forEach(cid => { const i = deck.findIndex(u => S.cards[u].id === cid); if (i >= 0) top.push(deck.splice(i, 1)[0]); }); deck.unshift(...top); }
       S.players.push({ deckId, deck, hand: [], hits: 0, kills: 0, losses: 0, rampNext: 0, energyBonus: 0, costUpNext: 0, costUp: 0 });
     });
 
@@ -39,6 +42,7 @@
     else chosen = [pick(byEra(eraOf(0))), pick(byEra(eraOf(1)))];
     chosen.push(pick(byEra('共通')));
     shuffle(chosen);
+    if (opt.fixed && opt.fixed.locs) chosen = opt.fixed.locs.slice();
     S.locs = chosen.map(id => ({ id, revealed: false }));
 
     // ---------- 計算 ----------

@@ -106,8 +106,8 @@
 
   // ---------- 画面切りかえ ----------
   function show(id) {
-    if (id === 'title') { const st = store.get('stars', 0); $('#titleRank').innerHTML = `段位 <b>${rankOf(st)[1]}</b>　通算 ★${st}`; }
     $$('.screen').forEach(s => s.classList.toggle('on', s.id === id)); fitAll();
+    if (window.RC_META) RC_META.onShow(id);
   }
 
   // ---------- 状態 ----------
@@ -118,9 +118,11 @@
   const revealed = (uid) => V.resolving ? V.rev.has(uid) : G.S.cards[uid].revealed;
   const pw = (uid) => V.snap.powers[uid];
 
-  function newGame(deckId) {
-    myDeck = deckId; const others = Object.keys(DECKS).filter(k => k !== deckId); cpuDeck = others[Math.floor(Math.random() * others.length)];
-    G = E.create({ seed: (Math.random() * 1e9) | 0, decks: [myDeck, cpuDeck] });
+  const TUT = () => window.RC_TUTORIAL && RC_TUTORIAL.active ? RC_TUTORIAL : null;
+  function newGame(deckId, o) {
+    o = o || {};
+    myDeck = deckId; const others = Object.keys(DECKS).filter(k => k !== deckId); cpuDeck = o.cpu || others[Math.floor(Math.random() * others.length)];
+    G = E.create({ seed: o.seed || ((Math.random() * 1e9) | 0), decks: [myDeck, cpuDeck], fixed: o.fixed });
     V = { resolving: false, rev: new Set(), snap: G.snap(), hide: new Set(), oppShown: false, locShown: [false, false, false], disp: null };
     log = { combos: [] }; sel = null; busy = true;
     show('game'); renderAll(); camera(-1, 1, 1, 10);
@@ -346,6 +348,39 @@
     }
   }
   function floatText(x, y, text, cls) { addFx(`<div class="float ${cls}">${text}</div>`, x, y, 1100); }
+  // カットイン（強いカード・史実コンボ）
+  async function cutIn(uids, name, sub, mode, mine) {
+    const arts = uids.map(u => { const d = CARDS[G.S.cards[u].id]; return `<div class="cu-art${isFace(d) ? ' face' : ''}" style="background-image:url('${imgUrl(d)}')"></div>`; }).join(mode === 'combo' ? '<div class="cu-x">×</div>' : '');
+    const tag = mode === 'combo' ? '史実コンボ' : (mine ? 'あなたの切り札' : '相手の切り札');
+    const el = addFx(`<div class="cutin ${mode} ${mine ? 'me' : 'op'}"><div class="cu-flash"></div><div class="cu-band"><div class="cu-lines"></div>
+      <div class="cu-arts">${arts}</div><div class="cu-text"><div class="cu-tag">${tag}</div><div class="cu-name">${name}</div><div class="cu-sub">${sub}</div></div></div></div>`, undefined, undefined, 99999);
+    SE.whoosh(); SE.play(mode === 'combo' ? 'cheer' : 'shock', 0.8);
+    await sleep(mode === 'combo' ? 1900 : 1050);
+    el.classList.add('out'); await sleep(260); el.remove();
+  }
+  // 「〇〇の効果」吹き出し：どのカードの効果で、何がいくつ変わったか
+  function fxCall(srcUid, lines, at) {
+    const src = srcUid && cardNode(srcUid), d = srcUid && CARDS[G.S.cards[srcUid].id];
+    const c = at || (src ? centerOf(src) : { x: stage.offsetWidth / 2, y: stage.offsetHeight / 2 });
+    const mine = srcUid && G.S.cards[srcUid].owner === ME;
+    const html = `<div class="fxcall ${mine ? 'me' : 'op'}"><div class="fc-h">${d ? d.name + 'の効果' : '効果'}</div>${lines.map(l => `<div class="fc-l"><span>${l[0]}</span>${l[1] !== undefined ? `<b class="${l[2] || ''}">${l[1]}</b>` : ''}</div>`).join('')}</div>`;
+    const el = addFx(html, c.x, c.y, 1500);
+    // 画面からはみ出さないように
+    const W = stage.offsetWidth, H = stage.offsetHeight, w = el.offsetWidth, h = el.offsetHeight;
+    el.style.left = Math.max(w / 2 + 6, Math.min(W - w / 2 - 6, c.x)) + 'px';
+    el.style.top = Math.max(h + 8, Math.min(H - 8, c.y - 34)) + 'px';
+    return el;
+  }
+  // 効果の元から対象へ光の線
+  function beam(fromEl, toEl, cls) {
+    if (!fromEl || !toEl || fromEl === toEl) return;
+    const a = centerOf(fromEl), b = centerOf(toEl), dx = b.x - a.x, dy = b.y - a.y;
+    const el = addFx(`<div class="beam ${cls || ''}"></div>`, a.x, a.y, 700);
+    el.style.width = Math.hypot(dx, dy) + 'px'; el.style.transform = `rotate(${Math.atan2(dy, dx)}rad)`;
+  }
+  const strong = (d) => d.cost >= 5 || d.leader;
+  const nm = (u) => CARDS[G.S.cards[u].id].name;
+  const sg = (n) => (n > 0 ? '+' : '') + n;
   function cardNode(uid) { return $(`#board [data-uid="${uid}"]`) || $(`#hand [data-uid="${uid}"]`); }
   async function banner(big, sub, cls, hold) {
     const el = addFx(`<div class="banner ${cls || ''}"><div class="bar"></div><div class="shine"></div>${cls === 'combo' ? '<div class="ctitle">史実コンボ</div>' : ''}<div class="big">${big}</div>${sub ? `<div class="sub">${sub}</div>` : ''}</div>`, undefined, undefined, 99999);
@@ -358,6 +393,7 @@
       const to = V.snap.totals[li][p], from = +(el.dataset.prev || el.textContent);
       el.dataset.prev = to;
       if (from === to) return;
+      if (V.resolving) { const r = rectS(el); floatText(r.x + r.w + 16, r.y + r.h / 2, sg(to - from), 'tdiff ' + (to > from ? 'plus' : 'minus')); el.classList.remove('tglow'); void el.offsetWidth; el.classList.add('tglow'); }
       const t0 = performance.now();
       const step = (t) => { const k = Math.min(1, (t - t0) / 350); el.textContent = Math.round(from + (to - from) * k); if (k < 1) requestAnimationFrame(step); };
       requestAnimationFrame(step);
@@ -402,11 +438,13 @@
     renderTop(); renderHand(mine); if (mine.length) SE.play('tap');
     await sleep(mine.length ? 450 : 0);
     // CPU（置き場所は伏せたまま、ターン終了で見せる）
-    E.cpuPlan(G, OP);
-    const dc = E.cpuDecide(G, OP);
+    let dc = null;
+    if (TUT()) TUT().cpu(G, OP);
+    else { E.cpuPlan(G, OP); dc = E.cpuDecide(G, OP); }
     if (dc === 'declare' && G.declare(OP)) { SE.play('shock'); await banner('天下取り宣言', '相手が勝負に出た！ 勝ち負けの★が±4に。撤退（★-1）は3ターン目まで', '', 1600); }
     else if (dc === 'retreat') { G.retreat(OP); renderAll(); camera(-1, 0.96, 0.45, 900); return showResult(); }
     busy = false; V.snap = G.snap(); renderAll();
+    if (TUT()) TUT().onTurn(G.S.turn);
   }
 
   async function endTurn() {
@@ -439,27 +477,40 @@
         if (el) { el.classList.add('flipin'); const c = centerOf(el); setTimeout(() => { ring(c.x, c.y, e.p === ME ? 'blue' : 'red'); }, 120); }
         SE.whoosh(true); SE.play('tap', 0.8);
         await sleep(560);
+        const rd = CARDS[G.S.cards[e.uid].id];
+        if (strong(rd)) await cutIn([e.uid], rd.name, rd.text, 'big', e.p === ME);
       } else if (e.t === 'effect') {
         V.snap = e.snap; renderBoardCounting(); renderHand();
         const src = cardNode(e.uid);
         if (e.proph) { V.prophPending.add(e.uid); renderBoard(); }
-        if (src) { const c = centerOf(src); if (!e.targets.length) floatText(c.x, c.y - 30, e.text, 'info'); }
-        if (e.cost) { if (src) { const c = centerOf(src); floatText(c.x, c.y - 30, e.text, 'info'); } $$('#hand .hc').forEach(h => h.classList.add('buff')); SE.play('good', 0.8); await sleep(700); continue; }
+        if (src) src.classList.add('casting');
+        if (!e.targets.length && !e.cost) fxCall(e.uid, [[e.text]]);
+        if (e.cost) { fxCall(e.uid, [[e.text]]); $$('#hand .hc').forEach(h => { h.classList.add('buff'); beam(src, h, 'gold'); }); SE.play('good', 0.8); await sleep(800); continue; }
         if (e.targets.length) {
+          // 対象がほかの場所にもあるときは全体を見せる
+          const lis = new Set(e.targets.map(t => G.S.cards[t].loc).filter(l => l >= 0));
+          if (lis.size > 1 || (lis.size === 1 && !lis.has(V.camLi))) { V.camLi = lis.size === 1 ? [...lis][0] : -1; await camera(V.camLi, V.camLi < 0 ? 1 : 1.06, V.camLi < 0 ? 1 : 0.92, 240); }
           SE.play(e.delta < 0 ? 'hit' : 'ok', 0.9);
+          const lines = [];
           e.targets.forEach(t => {
-            const el = cardNode(t); if (!el) return;
+            const el = cardNode(t);
+            if (e.delta !== undefined) lines.push([nm(t), sg(e.delta), e.delta < 0 ? 'minus' : 'plus']);
+            if (!el) return;
             const c = centerOf(el);
+            beam(src, el, e.delta < 0 ? 'red' : 'gold');
             el.classList.add(e.delta < 0 ? 'hit' : 'buff');
-            if (e.delta !== undefined) floatText(c.x, c.y - 10, (e.delta > 0 ? '+' : '') + e.delta, e.delta < 0 ? 'minus' : 'plus');
-            if (e.delta > 0) sparks(c.x, c.y, 8);
+            if (e.delta !== undefined) floatText(c.x, c.y - 10, sg(e.delta), e.delta < 0 ? 'minus' : 'plus');
+            if (e.delta > 0) sparks(c.x, c.y, 8); else if (e.delta < 0) ring(c.x, c.y, 'red');
           });
-          if (src && !e.targets.includes(e.uid)) { const c = centerOf(src); floatText(c.x, c.y - 40, e.text, 'info'); }
+          if (e.toHand) lines.unshift(['手札']);
+          if (!lines.length) lines.push([e.text]);
+          else { const tx = (e.text || '').replace(/\s*[+\-−]?\d+$/, '').trim(); if (tx && lines.length < 4 && !e.targets.some(t => tx.includes(nm(t)))) lines.unshift([tx]); }
+          fxCall(e.uid, lines.slice(0, 5));
         }
-        await sleep(e.targets.length ? 750 : 600);
+        await sleep(e.targets.length ? 900 : 650);
       } else if (e.t === 'destroy') {
         const src = cardNode(e.uid), el = cardNode(e.target);
-        if (src && src !== el) { const c = centerOf(src); floatText(c.x, c.y - 30, e.self ? '自分のカードを退場' : '退場させる', 'info'); }
+        fxCall(e.uid, [[nm(e.target), '退場', 'minus']]); beam(src, el, 'red');
         await sleep(350);
         if (el) { const c = centerOf(el); el.classList.add('shatter'); sparks(c.x, c.y, 18); ring(c.x, c.y, 'red'); floatText(c.x, c.y, '退場', 'minus'); }
         SE.play('hit'); SE.whoosh();
@@ -469,7 +520,7 @@
         await sleep(250);
       } else if (e.t === 'steal' || e.t === 'move') {
         const src = cardNode(e.uid), tu = e.target || e.uid, owner = G.S.cards[tu].owner;
-        if (src) { const c = centerOf(src); floatText(c.x, c.y - 30, e.t === 'steal' ? 'うばう' : (e.target ? '移動させる' : 'かけつける'), 'info'); }
+        fxCall(e.uid, [[nm(tu), e.t === 'steal' ? 'うばう' : (e.target ? '移動' : 'かけつける'), e.t === 'steal' ? 'minus' : '']]);
         await sleep(300);
         const old = grabRects();
         V.disp.forEach(l => l.forEach((x, i) => l[i] = x.filter(u => u !== tu)));
@@ -486,19 +537,20 @@
         SE.play('decide', 0.8); await sleep(650);
       } else if (e.t === 'draw') {
         V.hide.delete(e.uid); renderTop(); if (e.p === ME) renderHand([e.uid]);
-        const src = cardNode(e.reason); if (src) { const c = centerOf(src); floatText(c.x, c.y - 30, '1枚引いた', 'info'); }
-        SE.play('tap', 0.8); await sleep(450);
+        const src = cardNode(e.reason);
+        if (src) { fxCall(e.reason, [['カードを引く', '+1枚', 'plus']]); if (e.p === ME) beam(src, cardNode(e.uid), 'gold'); }
+        SE.play('tap', 0.8); await sleep(550);
       } else if (e.t === 'discard') {
-        const src = cardNode(e.uid); if (src) { const c = centerOf(src); floatText(c.x, c.y - 30, e.targets.map(u => CARDS[G.S.cards[u].id].name).join('・') + 'を捨てた', 'info'); }
-        V.snap = e.snap; renderHand(); SE.play('ng', 0.8); await sleep(800);
+        fxCall(e.uid, e.targets.map(u => [nm(u), '捨てた', 'minus']));
+        V.snap = e.snap; renderHand(); SE.play('ng', 0.8); await sleep(850);
       } else if (e.t === 'rampSet' || e.t === 'canceled') {
         const src = cardNode(e.uid);
-        if (src) { const c = centerOf(src); floatText(c.x, c.y - 30, e.t === 'rampSet' ? '次のターン エネルギー+' + e.amount : '効果が止められた', e.t === 'rampSet' ? 'info' : 'minus'); if (e.t === 'canceled') src.classList.add('hit'); }
+        fxCall(e.uid, [e.t === 'rampSet' ? ['次のターンのエネルギー', '+' + e.amount, 'plus'] : ['効果が止められた']]); if (src && e.t === 'canceled') src.classList.add('hit');
         SE.play(e.t === 'rampSet' ? 'good' : 'ng', 0.7); await sleep(650);
       } else if (e.t === 'fetch') {
         V.hide.delete(e.uid); renderTop(); renderHand(e.p === ME ? [e.uid] : null);
         const src = cardNode(e.from);
-        if (src) { const c = centerOf(src); floatText(c.x, c.y - 30, CARDS[G.S.cards[e.uid].id].name + 'を手札に', 'info'); }
+        fxCall(e.from, [[nm(e.uid), '手札へ', 'plus']]); if (e.p === ME) beam(src, cardNode(e.uid), 'gold');
         SE.play('good', 0.8); await sleep(800);
       } else if (e.t === 'combo') {
         V.camLi = G.S.cards[e.uid].loc; await camera(V.camLi, 1.14, 0.85, 320);
@@ -508,19 +560,21 @@
         SE.play('good');
         if (G.S.cards[e.uid].owner === ME) log.combos.push({ a: pd.name, b: d.name, memo: d.memo });
         else log.combos.push({ a: pd.name, b: d.name, memo: d.memo, opp: true });
-        await banner(`${pd.name} × ${d.name}`, d.memo + `（パワー+${d.amount}）`, 'combo', 2300);
+        await cutIn([e.partner, e.uid], `${pd.name} × ${d.name}`, d.memo + `<b>${d.name} パワー+${d.amount}</b>`, 'combo', G.S.cards[e.uid].owner === ME);
       } else if (e.t === 'prophecy') {
         V.prophPending.delete(e.uid); V.snap = e.snap; renderBoardCounting();
         const el = cardNode(e.uid);
         if (el) { const c = centerOf(el); addFx(`<div class="stamp ${e.hit ? 'hit' : 'miss'}">${e.hit ? '予言的中' : 'はずれ'}</div>`, c.x, c.y - 10, 1000); if (e.hit) { ring(c.x, c.y); sparks(c.x, c.y, 16); } }
         SE.play(e.hit ? 'good' : 'ng', 0.8);
-        if (e.hit) e.targets.forEach(t => { const tl = cardNode(t); if (!tl) return; const c = centerOf(tl); tl.classList.add(e.delta < 0 ? 'hit' : 'buff'); floatText(c.x, c.y, (e.delta > 0 ? '+' : '') + e.delta, e.delta < 0 ? 'minus' : 'plus'); });
+        if (e.hit) { e.targets.forEach(t => { const tl = cardNode(t); if (!tl) return; const c = centerOf(tl); beam(el, tl, e.delta < 0 ? 'red' : 'gold'); tl.classList.add(e.delta < 0 ? 'hit' : 'buff'); floatText(c.x, c.y, sg(e.delta), e.delta < 0 ? 'minus' : 'plus'); });
+          if (e.targets.length) fxCall(e.uid, e.targets.slice(0, 4).map(t => [nm(t), sg(e.delta), e.delta < 0 ? 'minus' : 'plus'])); }
         await sleep(950);
       }
     }
     V.camLi = -1; await cameraReset(350);
     V.resolving = false; V.oppShown = false; V.hide.clear(); V.disp = null;
     V.snap = G.snap(); renderAll();
+    if (TUT()) await TUT().afterTurn(G.S.turn);
     if (G.S.over) { camera(-1, 0.96, 0.45, 900); await sleep(700); return showResult(); }
     await sleep(250);
     nextTurn();
@@ -535,6 +589,7 @@
   }
   function doPlay(uid, li, fromRect) {
     if (busy) return false;
+    if (TUT() && !TUT().allowPlay(G.S.cards[uid].id, li)) { SE.play('ng', 0.6); TUT().nudge(); return false; }
     const was = G.S.pending[ME].includes(uid);
     if (!G.canPlay(ME, uid, li)) {
       SE.play('ng', 0.6);
@@ -657,13 +712,17 @@
   // ---------- ボタンの動作 ----------
   let modalRedraw = null;
   function action(act, el) {
+    if (window.RC_META && RC_META.action(act, el)) return;
     switch (act) {
-      case 'toDeck': SE.play('decide'); renderDeckList(); show('deck'); break;
-      case 'zukan': SE.play('decide'); openZukan($('#deck').classList.contains('on') ? 'deck' : 'title'); break;
-      case 'zkBack': SE.play('tap'); if (zk.from === 'deck') { renderDeckList(); show('deck'); } else show('title'); break;
-      case 'zkPrev': case 'zkNext': { SE.play('tap'); const n = Object.keys(DECKS).length; zk.deck = (zk.deck + (act === 'zkNext' ? 1 : n - 1)) % n; zk.card = 0; renderZukan(); break; }
+      case 'toDeck': SE.play('decide'); show('deck'); renderDeckList(); break;
+      case 'zukan': SE.play('decide'); RC_META.openZList(); break;
+      case 'zkBack': SE.play('tap'); if (zk.from === 'shop') RC_META.openShop(); else RC_META.openZList(); break;
+      case 'zkPrev': case 'zkNext': {
+        SE.play('tap'); const ids = Object.keys(DECKS), own = ids.filter(i => RC_META.isOwned(i)); if (own.length < 2) break;
+        const cur = own.indexOf(ids[zk.deck]); const nx = own[(cur + (act === 'zkNext' ? 1 : own.length - 1)) % own.length];
+        zk.deck = ids.indexOf(nx); zk.card = 0; renderZukan(); break; }
       case 'zkCard': SE.play('tap', 0.6); zk.card = +el.dataset.i; renderZukan(); break;
-      case 'toTitle': SE.play('tap'); closeModal(); G = null; show('title'); break;
+      case 'toTitle': SE.play('tap'); RC_META.toMenu(); break;
       case 'pickDeck': SE.play('decide'); newGame(el.dataset.deck); break;
       case 'howto': SE.play('tap'); openHowto(0); break;
       case 'settings': SE.play('tap'); openSettings(false); break;
@@ -676,18 +735,12 @@
       case 'menu': openMenu(); break;
       case 'closeModal': SE.play('tap'); closeModal(); break;
       case 'again': SE.play('decide'); closeModal(); newGame(myDeck); break;
-      case 'deckAgain': SE.play('tap'); closeModal(); G = null; renderDeckList(); show('deck'); break;
+      case 'deckAgain': SE.play('tap'); closeModal(); G = null; show('deck'); renderDeckList(); break;
+      case 'resMenu': SE.play('tap'); RC_META.toMenu(); break;
     }
   }
 
-  function renderDeckList() {
-    $('#deckList').innerHTML = Object.values(DECKS).map(d => `
-      <div class="dtile" data-act="pickDeck" data-deck="${d.id}" style="--dc:${d.color}">
-        <div class="df" style="background-image:url('img/face/${d.face}.webp')"></div>
-        <div class="dt"><div class="dn fit">${d.name}</div><div class="de fit">${d.era}時代・テーマ「${d.theme}」</div><div class="dd fit">${d.desc}</div></div>
-      </div>`).join('');
-    $('#deckList').scrollTop = 0;
-  }
+  function renderDeckList() { if (window.RC_META) RC_META.renderDeckList(); }
 
   // ---------- カード図鑑 ----------
   let zk = { deck: 0, card: 0, from: 'title' };
@@ -695,8 +748,8 @@
     const ids = Object.keys(DECKS), d = DECKS[ids[zk.deck]];
     $('#zkTop').innerHTML = `<button class="btn" data-act="zkBack">もどる</button>
       <div class="zf" style="background-image:url('img/face/${d.face}.webp')"></div>
-      <div class="zt"><div class="zn fit">${d.name}</div><div class="ze fit">${d.era}時代・「${d.theme}」${layout === 'land' ? '　' + d.desc : ''}　${zk.deck + 1} / ${ids.length}</div></div>
-      <button class="btn" data-act="zkPrev">${layout === 'land' ? '前の人物' : '前へ'}</button><button class="btn" data-act="zkNext">${layout === 'land' ? '次の人物' : '次へ'}</button>`;
+      <div class="zt"><div class="zn fit">${d.name}</div><div class="ze fit">${d.era}時代・「${d.theme}」${layout === 'land' ? '　' + d.desc : ''}　${zk.from === 'shop' ? 'ショップの品' : ''}</div></div>
+      ${zk.from === 'shop' ? '' : `<button class="btn" data-act="zkPrev">${layout === 'land' ? '前の人物' : '前へ'}</button><button class="btn" data-act="zkNext">${layout === 'land' ? '次の人物' : '次へ'}</button>`}`;
     $('#zkGrid').innerHTML = d.cards.map((cid, i) => { const c = CARDS[cid]; return `<div class="card hc zkhc${i === zk.card ? ' on' : ''}${c.leader || isFace(c) ? ' leader' : ''}" data-act="zkCard" data-i="${i}">${handInner(c, c.power)}</div>`; }).join('');
     const c = CARDS[d.cards[zk.card]];
     const decksWith = Object.values(DECKS).filter(x => x.cards.includes(c.id)).map(x => x.name);
@@ -708,7 +761,7 @@
       <div class="zi-share fitb">${decksWith.length > 1 ? '共通カード：' + decksWith.join('・') + 'のデッキに入っている' : ''}</div>`;
     fitAll($('#zukan'));
   }
-  function openZukan(from) { zk.from = from; zk.card = 0; show('zukan'); renderZukan(); }
+  function openZukanDeck(id, from) { zk.from = from; zk.deck = Object.keys(DECKS).indexOf(id); zk.card = 0; show('zukan'); renderZukan(); }
 
   // ---------- モーダル ----------  // ---------- モーダル ----------
   function openModal(html, redraw) { const M = $('#modal'); M.innerHTML = `<div class="shade"></div><div class="box panel">${html}</div>`; M.classList.add('on'); modalRedraw = redraw || null; fitAll(M); }
@@ -729,16 +782,18 @@
       <div class="mbtns"><button class="btn gold" data-act="closeModal">つづける</button></div>`, openMenu);
     $('#mHow').onclick = () => openHowto(0, true);
     $('#mSet').onclick = () => openSettings(true);
-    $('#mTitle').onclick = () => openConfirm('タイトルにもどりますか？', 'この試合は記録されません。', 'もどる', () => { G = null; show('title'); });
+    $('#mTitle').onclick = () => openConfirm('タイトルにもどりますか？', 'この試合は記録されません。', 'もどる', () => { G = null; if (window.RC_TUTORIAL) RC_TUTORIAL.stop(); RC_META.toMenu(); });
   }
   function openSettings(fromMenu) {
     const row = (id, label, on) => `<div class="setrow"><span>${label}</span><button class="btn ${on ? 'gold' : ''}" id="${id}">${on ? 'オン' : 'オフ'}</button></div>`;
     openModal(`<div class="mtitle">設定</div>
-      <div class="mbody setbody">${row('sSnd', '音', SE.on)}${row('sLbl', 'カードの「コスト」「パワー」の文字', showLabels)}${row('s3d', '3D表示（重いときはオフ）', use3d)}</div>
+      <div class="mbody setbody">${row('sSnd', '効果音', SE.on)}${row('sBgm', 'BGM', RC_META.BGM.on)}${row('sLbl', 'カードの「コスト」「パワー」の文字', showLabels)}${row('s3d', '3D表示（重いときはオフ）', use3d)}${G ? '' : `<div class="setrow"><span>チュートリアル（本じいの教え）</span><button class="btn" id="sTut">見る</button></div>`}</div>
       <div class="mbtns"><button class="btn gold" id="sBack">${fromMenu ? 'もどる' : 'とじる'}</button></div>`, () => openSettings(fromMenu));
+    $('#sBgm').onclick = () => { RC_META.BGM.set(!RC_META.BGM.on); SE.play('tap'); openSettings(fromMenu); };
     $('#sSnd').onclick = () => { SE.on = !SE.on; store.set('sound', SE.on); SE.play('tap'); openSettings(fromMenu); };
     $('#s3d').onclick = () => { use3d = !use3d; store.set('d3', use3d); applyLabels(); SE.play('tap'); if (G) { renderAll(); camera(-1, 1, 1, 10); } openSettings(fromMenu); };
     $('#sLbl').onclick = () => { showLabels = !showLabels; store.set('labels', showLabels); applyLabels(); SE.play('tap'); openSettings(fromMenu); };
+    if ($('#sTut')) $('#sTut').onclick = () => { SE.play('decide'); closeModal(); window.RC_TUTORIAL.start(null); };
     $('#sBack').onclick = () => { SE.play('tap'); if (fromMenu && G) openMenu(); else closeModal(); };
   }
   function cardGuide() {
@@ -769,12 +824,11 @@
 
   function showResult() {
     busy = true; renderCtrl();
+    if (TUT()) return TUT().onEnd();
     const r = G.S.over;
     const win = r.winner === ME, draw = r.winner < 0;
-    const delta = draw ? 0 : (win ? r.stakes : -r.stakes);
-    const before = store.get('stars', 0);
-    const total = Math.max(0, before + delta); store.set('stars', total);
-    const up = rankIdx(total) > rankIdx(before), down = rankIdx(total) < rankIdx(before);
+    const X = RC_META.applyResult(r, ME);
+    RC_META.BGM.play(win ? 'win' : 'lose');
     SE.play(win ? 'cheer' : draw ? 'tap' : 'shock');
     const locs = [0, 1, 2].map(li => {
       const a = G.total(li, ME), b = G.total(li, OP);
@@ -787,10 +841,10 @@
     const title = r.retreat !== undefined ? (win ? '相手が撤退' : '撤退') : (win ? '勝利' : draw ? '引き分け' : '敗北');
     const fn = () => {
       openModal(`<div class="res-title ${win ? 'win' : draw ? 'draw' : 'lose'}">${title}</div>
-        <div class="res-stars">${draw ? '★の増減なし' : (win ? '★+' + r.stakes : '★-' + r.stakes)}${G.S.declaredBy >= 0 && r.retreat === undefined ? '（宣言）' : ''}　段位 <b>${rankOf(total)[1]}</b>（通算 ★${total}）</div>
-        <div class="res-locs">${locs}</div>
+        <div class="res-stars">${draw ? '★の増減なし' : (win ? '★+' + r.stakes : '★-' + r.stakes)}${G.S.declaredBy >= 0 && r.retreat === undefined ? '（宣言）' : ''}</div>
+        <div class="res-locs">${locs}</div>${RC_META.resultHtml(X)}
         <div class="res-combos fitb"><h4>この試合の史実コンボ</h4>${cl || '<div style="color:var(--ink2)">史実コンボは出なかった。歴史でつながるカードを同じ場所に置いてみよう</div>'}${more}</div>
-        <div class="mbtns"><button class="btn" data-act="deckAgain">デッキをえらぶ</button><button class="btn gold" data-act="again">もう一度</button></div>`, fn);
+        <div class="mbtns"><button class="btn" data-act="resMenu">メニュー</button><button class="btn" data-act="deckAgain">デッキ変更</button><button class="btn gold" data-act="again">もう一度</button></div>`, () => { fn(); });
       if (win) for (let i = 0; i < 40; i++) {
         const c = document.createElement('div'); c.className = 'confetti';
         c.style.left = Math.random() * 100 + '%'; c.style.background = ['#ffe7a3', '#e8c36a', '#8fd0ff', '#ff9aa8', '#fff'][i % 5];
@@ -798,16 +852,14 @@
         $('#modal').appendChild(c); setTimeout(() => c.remove(), 4000);
       }
     };
-    fn();
-    if (up) setTimeout(() => { SE.play('cheer'); banner('段位アップ', rankOf(total)[1] + ' になった！', '', 1800); }, 900);
-    else if (down) setTimeout(() => banner('段位ダウン', rankOf(total)[1] + ' にもどった', '', 1400), 900);
+    fn(); RC_META.animateResult(X);
   }
 
   // ---------- 開始 ----------
   applyLabels();
   window.addEventListener('resize', fitStage);
   stage.classList.add(layout); fitStage(); applyLabels();
-  show('title');
-  // テスト用（自動確認ツールから使う）
-  window.RC_UI = { get G() { return G; }, newGame, endTurn, doPlay, action, get busy() { return busy; }, fast(v) { SPEED = v ? 0.03 : 1; } };
+  // テスト用（自動確認ツールから使う）と、meta.js から使う部品
+  window.RC_UI = { get G() { return G; }, newGame, endTurn, doPlay, action, get busy() { return busy; }, fast(v) { SPEED = v ? 0.03 : 1; }, cardNode: (u) => cardNode(u), get sel() { return sel; },
+    x: { store, SE, show, openModal, closeModal, openConfirm, fitAll, banner, sleep, setGame(v) { G = v; }, openZukanDeck, get layout() { return layout; } } };
 })();

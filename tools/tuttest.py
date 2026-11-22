@@ -10,6 +10,7 @@ async def run(br, name, vw, vh):
     await pg.click('#boot'); await pg.wait_for_timeout(300)
     for _ in range(6): await pg.mouse.click(vw/2, vh/2); await pg.wait_for_timeout(120)
     await pg.wait_for_timeout(900); await pg.mouse.click(vw/2, vh/2); await pg.wait_for_timeout(1400)
+    await pg.wait_for_selector('#nmIn', timeout=5000); await pg.fill('#nmIn', 'てすと'); await pg.dispatch_event('#nmIn', 'input'); await pg.click('#nmOk'); await pg.wait_for_timeout(400)
     await pg.click('#ftTut'); await pg.wait_for_timeout(300)
     await pg.evaluate('RC_UI.fast(true)')
     n = 0; blocked_ok = None

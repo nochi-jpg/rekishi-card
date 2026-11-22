@@ -1130,6 +1130,7 @@ button { font-family: inherit; font-weight: 900; color: inherit; border: 0; back
 .land .gcard .n3 { top: 128px; } .land .gcard .n4 { top: 168px; }
 .port .box.big .mbtns .btn { font-size: 14px; padding: 0 6px; white-space: nowrap; }
 .bgp { display: flex; flex-direction: column; }
+.pz-foot .btn { white-space: nowrap; } .port .pz-foot { gap: 6px; } .port .pz-foot .btn { width: 92px; font-size: 14px; padding: 0 4px; } .port .pz-foot .pgno { font-size: 12px; }
 
 </style>
 </head>
@@ -3165,6 +3166,7 @@ window.RC_SE = {"tap": "data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2Z
   // ---------- 画面ごとの処理 ----------
   function onShow(id) {
     stage.classList.toggle('on-title', id === 'title');
+    if (id === 'deck' && !deckFor) { const h = $('#deck .deck-head'); if (h && !h.dataset.keep) h.textContent = 'デッキをえらぶ'; }
     if (id === 'title' || id === 'starter' || id === 'deck' || id === 'camp' || id === 'puzzle') BGM.play('menu');
     if (id === 'shop' || id === 'zukan' || id === 'zlist') BGM.play('shop');
     if (id === 'game') BGM.play('battle');

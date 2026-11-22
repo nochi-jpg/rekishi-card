@@ -73,6 +73,7 @@
   // ---------- 画面ごとの処理 ----------
   function onShow(id) {
     stage.classList.toggle('on-title', id === 'title');
+    if (id === 'deck' && !deckFor) { const h = $('#deck .deck-head'); if (h && !h.dataset.keep) h.textContent = 'デッキをえらぶ'; }
     if (id === 'title' || id === 'starter' || id === 'deck' || id === 'camp' || id === 'puzzle') BGM.play('menu');
     if (id === 'shop' || id === 'zukan' || id === 'zlist') BGM.play('shop');
     if (id === 'game') BGM.play('battle');

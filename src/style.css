@@ -1123,3 +1123,4 @@ button { font-family: inherit; font-weight: 900; color: inherit; border: 0; back
 .land .gcard .n3 { top: 128px; } .land .gcard .n4 { top: 168px; }
 .port .box.big .mbtns .btn { font-size: 14px; padding: 0 6px; white-space: nowrap; }
 .bgp { display: flex; flex-direction: column; }
+.pz-foot .btn { white-space: nowrap; } .port .pz-foot { gap: 6px; } .port .pz-foot .btn { width: 92px; font-size: 14px; padding: 0 4px; } .port .pz-foot .pgno { font-size: 12px; }

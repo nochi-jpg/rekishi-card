@@ -1223,3 +1223,27 @@ button { font-family: inherit; font-weight: 900; color: inherit; border: 0; back
 .fr-res2 .res-meta { position: static; margin: 0 auto; }
 .res-head .mtitle { font-size: 34px; } .res-head.win .mtitle { color: #ffe7a3; text-shadow: 0 0 18px rgba(255,214,120,.9); } .res-head.lose .mtitle { color: #ff9aa8; }
 .fr-res2 .res-meta { width: 100%; height: auto; }
+
+/* ===== v0.7 豪華な演出 ===== */
+#fxCanvas { position: absolute; left: 0; top: 0; z-index: 49; pointer-events: none; }
+.card.fxglow { animation: fxglow 1s ease-out; }
+@keyframes fxglow { 0% { box-shadow: 0 0 0 3px var(--fxc), 0 0 30px 8px var(--fxc); filter: brightness(1.8); } 100% { box-shadow: 0 0 0 0 transparent, 0 0 0 0 transparent; filter: none; } }
+/* チュートリアル：大事なことは赤字、勝利条件は大きく */
+#tut .tut-txt em.r { font-style: normal; font-weight: 900; color: #ff6b6b; text-shadow: 0 0 8px rgba(255,80,80,.45); }
+#tut .tut-txt .goal { display: inline-block; margin: 0 8px 2px 0; padding: 1px 12px; border-radius: 6px; background: linear-gradient(180deg, #ff7a7a, #c8323c); color: #fff; font-weight: 900; font-size: .9em; letter-spacing: .1em; }
+/* 初心者ミッション */
+.beg-chip { position: absolute; display: flex; align-items: center; gap: 12px; padding: 0 14px; border-radius: 14px; cursor: pointer; font-family: inherit; color: #fff; text-align: left;
+  background: linear-gradient(120deg, #1f7a4a, #0f3a24); border: 2px solid #8dffb5; box-shadow: 0 6px 14px rgba(0,0,0,.5), 0 0 14px rgba(109,255,143,.35); }
+.beg-chip:hover { filter: brightness(1.15); transform: translateY(-2px); }
+.beg-chip .dc-ic { width: 32px; height: 32px; color: #c8ffd9; flex: none; } .beg-chip .dc-t { display: flex; flex-direction: column; } .beg-chip b { font-size: 16px; color: #c8ffd9; white-space: nowrap; } .beg-chip .bc-n { font-size: 18px; font-weight: 900; }
+.beg-chip em { position: absolute; right: -8px; top: -8px; min-width: 26px; height: 26px; border-radius: 13px; background: #e0384e; color: #fff; font-style: normal; font-weight: 900; font-size: 15px; line-height: 26px; text-align: center; animation: tutBlink 1s infinite; box-shadow: 0 0 10px #e0384e; }
+.beg-chip.ready { animation: icPulse 1.6s ease-in-out infinite; }
+.tt-menu .hud .beg-chip { pointer-events: auto; }
+.land .tt-menu .beg-chip { right: 30px; top: 160px; width: 380px; height: 58px; }
+.port .tt-menu .beg-chip { right: 16px; top: 140px; width: 222px; height: 52px; } .port .beg-chip b { font-size: 13px; } .port .beg-chip .bc-n { font-size: 15px; } .port .beg-chip .dc-ic { width: 26px; height: 26px; }
+.hud.mini .beg-chip { display: none !important; }
+.mbody.beg .dm { height: 60px; } .mbody.beg .dm-t { white-space: normal; display: flex; flex-direction: column; } .mbody.beg .dm-t small { font-size: 12px; font-weight: 400; color: var(--ink2); }
+.bm-ic { width: 26px; height: 26px; flex: none; color: var(--gold3); } .dm.got .bm-ic { color: #6dff8f; }
+.dm.now { opacity: 1 !important; border-color: #6dff8f; box-shadow: 0 0 16px rgba(109,255,143,.6); animation: vsTag .5s cubic-bezier(.2,1.4,.4,1); }
+.bm-new { color: #6dff8f; font-size: 16px; }
+.port .mbody.beg .dm { height: auto; min-height: 54px; } .port .mbody.beg .dm-t { flex-basis: auto; flex: 1; font-size: 13px; } .port .mbody.beg .dm-b { width: 100px; font-size: 12px; }

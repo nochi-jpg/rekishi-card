@@ -266,7 +266,7 @@
   // ---------- セーブの引き継ぎQR（デバッグモードから） ----------
   function saveCode() {
     const S = M.SV, mask = ORDER.reduce((m, id, i) => m | (S.owned.includes(id) ? 1 << i : 0), 0);
-    const o = { n: S.name || '', o: mask, c: S.coins, r: S.cpu, p: S.pvp || 0, w: S.wins || 0, g: S.games || 0, pw: S.pvpW || 0, pg: S.pvpG || 0, t: S.tutorial ? 1 : 0, z: (S.puzzle && S.puzzle.done) || [], k: (S.camp && S.camp.done) || [], b: S.bg || '' };
+    const o = { n: S.name || '', o: mask, c: S.coins, r: S.cpu, p: S.pvp || 0, w: S.wins || 0, g: S.games || 0, pw: S.pvpW || 0, pg: S.pvpG || 0, t: S.tutorial ? 1 : 0, z: (S.puzzle && S.puzzle.done) || [], k: (S.camp && S.camp.done) || [], b: S.bg || '', q: S.beg || null, d: S.begDaily ? 1 : 0 };
     const body = b64.enc(utf8.enc(JSON.stringify(o)));
     return 'RCS1.' + body + '.' + hash16(body).toString(36);
   }
@@ -291,7 +291,7 @@
     const o = loadCode(t); if (!o) { U.SE.play('ng'); return U.openConfirm('読めませんでした', 'このゲームの引き継ぎQRではないか、こわれています。', 'もどる', () => openTransfer(), 'gold'); }
     const owned = ORDER.filter((id, i) => o.o & (1 << i));
     U.openConfirm('このデータで上書きしますか？', `名前：${o.n || '－'}　デッキ ${owned.length}個　コイン ${o.c}<br>今のデータは消えます。`, '上書きする', () => {
-      const S = M.SV; Object.assign(S, { name: o.n, owned, coins: o.c, cpu: o.r, pvp: o.p, wins: o.w, games: o.g, pvpW: o.pw, pvpG: o.pg, tutorial: !!o.t, started: true, puzzle: { done: o.z }, camp: { done: o.k }, bg: o.b });
+      const S = M.SV; Object.assign(S, { name: o.n, owned, coins: o.c, cpu: o.r, pvp: o.p, wins: o.w, games: o.g, pvpW: o.pw, pvpG: o.pg, tutorial: !!o.t, started: true, puzzle: { done: o.z }, camp: { done: o.k }, bg: o.b, beg: o.q || { got: [], bonus: false }, begDaily: !!o.d });
       M.saveNow(); U.SE.play('cheer'); M.toMenu();
     }, 'gold');
   }

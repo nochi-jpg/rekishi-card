@@ -108,6 +108,7 @@
   function show(id) {
     $$('.screen').forEach(s => s.classList.toggle('on', s.id === id)); fitAll();
     if (window.RC_META) RC_META.onShow(id);
+    if (window.RC_FX) setTimeout(() => RC_FX.screenIn($('#' + id)), 30);
   }
 
   // ---------- 状態 ----------
@@ -432,7 +433,7 @@
       const to = V.snap.totals[li][p], from = +(el.dataset.prev || el.textContent);
       el.dataset.prev = to;
       if (from === to) return;
-      if (V.resolving) { const r = rectS(el); floatText(r.x + r.w + 16, r.y + r.h / 2, sg(to - from), 'tdiff ' + (to > from ? 'plus' : 'minus')); el.classList.remove('tglow'); void el.offsetWidth; el.classList.add('tglow'); }
+      if (V.resolving) { const r = rectS(el); floatText(r.x + r.w + 16, r.y + r.h / 2, sg(to - from), 'tdiff ' + (to > from ? 'plus' : 'minus')); el.classList.remove('tglow'); void el.offsetWidth; el.classList.add('tglow'); if (window.RC_FX) RC_FX.pop(el, to > from); }
       const t0 = performance.now();
       const step = (t) => { const k = Math.min(1, (t - t0) / 350); el.textContent = Math.round(from + (to - from) * k); if (k < 1) requestAnimationFrame(step); };
       requestAnimationFrame(step);
@@ -532,6 +533,7 @@
         SE.whoosh(true); SE.play('tap', 0.8);
         await sleep(560);
         const rd = CARDS[G.S.cards[e.uid].id];
+        if (window.RC_FX) await RC_FX.reveal(cardNode(e.uid), rd, strong(rd));
         if (strong(rd)) await cutIn([e.uid], rd.name, rd.text, 'big', e.p === ME);
       } else if (e.t === 'effect') {
         V.snap = e.snap; renderBoardCounting(); renderHand();
@@ -551,7 +553,7 @@
             if (e.delta !== undefined) lines.push([nm(t), sg(e.delta), e.delta < 0 ? 'minus' : 'plus']);
             if (!el) return;
             const c = centerOf(el);
-            beam(src, el, e.delta < 0 ? 'red' : 'gold');
+            beam(src, el, e.delta < 0 ? 'red' : 'gold'); if (window.RC_FX) RC_FX.orb(src, el, e.delta >= 0);
             el.classList.add(e.delta < 0 ? 'hit' : 'buff');
             if (e.delta !== undefined) floatText(c.x, c.y - 10, sg(e.delta), e.delta < 0 ? 'minus' : 'plus');
             if (e.delta > 0) sparks(c.x, c.y, 8); else if (e.delta < 0) ring(c.x, c.y, 'red');
@@ -566,6 +568,7 @@
         const src = cardNode(e.uid), el = cardNode(e.target);
         fxCall(e.uid, [[nm(e.target), '退場', 'minus']]); beam(src, el, 'red');
         await sleep(350);
+        if (el && window.RC_FX) RC_FX.destroy(el);
         if (el) { const c = centerOf(el); el.classList.add('shatter'); sparks(c.x, c.y, 18); ring(c.x, c.y, 'red'); floatText(c.x, c.y, '退場', 'minus'); }
         SE.play('hit'); SE.whoosh();
         await sleep(600);
@@ -614,6 +617,7 @@
         SE.play('good');
         if (G.S.cards[e.uid].owner === ME) log.combos.push({ a: pd.name, b: d.name, memo: d.memo });
         else log.combos.push({ a: pd.name, b: d.name, memo: d.memo, opp: true });
+        if (window.RC_FX) await RC_FX.lightning(cardNode(e.partner), cardNode(e.uid));
         await cutIn([e.partner, e.uid], `${pd.name} × ${d.name}`, d.memo + `<b>${d.name} パワー+${d.amount}</b>`, 'combo', G.S.cards[e.uid].owner === ME);
       } else if (e.t === 'prophecy') {
         V.prophPending.delete(e.uid); V.snap = e.snap; renderBoardCounting();
@@ -658,7 +662,7 @@
     renderBoard(); renderHand(); renderCtrl(); renderDetail();
     flipFrom(old, 260, '#hand [data-uid]');
     const el = cardNode(uid);
-    const land = () => { el.classList.add('slam'); const c = centerOf(el); ring(c.x, c.y, 'blue'); sparks(c.x, c.y, 8); SE.whoosh(); };
+    const land = () => { el.classList.add('slam'); const c = centerOf(el); ring(c.x, c.y, 'blue'); sparks(c.x, c.y, 8); SE.whoosh(); if (window.RC_FX) RC_FX.place(el, CARDS[G.S.cards[uid].id]); };
     if (el && from) flyCard(uid, from, el, land); else if (el) land();
     const orb = $('#ctrl .orb'); if (orb && !was) orb.classList.add('bump');
     SE.play('decide', 0.8);
@@ -855,6 +859,7 @@
     const row = (id, ic, label, on) => `<div class="setrow">${IC(ic)}<span>${label}</span><button class="btn tog ${on ? 'gold on' : ''}" id="${id}"><i></i>${on ? 'オン' : 'オフ'}</button></div>`;
     const act = (id, ic, label, b, cls) => `<div class="setrow">${IC(ic)}<span>${label}</span><button class="btn ${cls || ''}" id="${id}">${b}</button></div>`;
     const rows = [row('sSnd', 'sound', '効果音', SE.on), row('sBgm', 'music', 'BGM', RC_META.BGM.on), row('sLbl', 'label', 'コスト・パワーの文字', showLabels), row('s3d', 'cube', '3D表示（重いときはオフ）', use3d)];
+    if (window.RC_FX && RC_FX.ok) rows.push(act('sFx', 'star', '演出の豪華さ', RC_FX.quality === 'high' ? '豪華' : 'ふつう', RC_FX.quality === 'high' ? 'gold' : ''));
     if (fsOK()) rows.push(act('sFull', 'full', '全画面表示', fsEl() ? 'もどす' : '全画面', fsEl() ? 'gold' : ''));
     if (G) rows.push(act('sQuit', 'home', 'タイトル画面にもどる（試合は放棄）', 'もどる', 'red'));
     else rows.push(act('sBg', 'palette', 'メニューの背景', 'えらぶ'), act('sName', 'pen', '名前：' + RC_META.playerName(), 'かえる'), act('sTut', 'help', 'チュートリアル', '見る'));
@@ -867,6 +872,7 @@
     $('#sSnd').onclick = () => { SE.on = !SE.on; store.set('sound', SE.on); SE.play('tap'); openSettings(fromMenu); };
     $('#s3d').onclick = () => { use3d = !use3d; store.set('d3', use3d); applyLabels(); SE.play('tap'); if (G) { renderAll(); camera(-1, 1, 1, 10); } openSettings(fromMenu); };
     $('#sLbl').onclick = () => { showLabels = !showLabels; store.set('labels', showLabels); applyLabels(); SE.play('tap'); openSettings(fromMenu); };
+    if ($('#sFx')) $('#sFx').onclick = () => { SE.play('tap'); RC_FX.setQuality(RC_FX.quality === 'high' ? 'low' : 'high'); openSettings(fromMenu); };
     if ($('#sFull')) $('#sFull').onclick = () => { SE.play('tap'); toggleFull(); setTimeout(() => openSettings(fromMenu), 300); };
     if ($('#sTut')) $('#sTut').onclick = () => { SE.play('decide'); closeModal(); window.RC_TUTORIAL.start(null); };
     if ($('#sBg')) $('#sBg').onclick = () => { SE.play('tap'); RC_META.openBgPicker(); };

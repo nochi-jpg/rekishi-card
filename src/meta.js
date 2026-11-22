@@ -44,6 +44,7 @@
         <div class="rt"><div class="rl">対人ランク</div><div class="rn">${p.name}</div>${bar(p)}<div class="rs">2台対戦で上がる</div></div></div>
       <div class="coin-box"><div class="ci"></div><b id="coinNum">${SV.coins}</b></div>
       <div class="name-plate"><small>なまえ</small><b>${SV.name || '－'}</b></div>
+      ${SV.started && !begDone() ? `<button class="beg-chip${begReady() ? ' ready' : ''}" data-act="beginner">${window.RC_ICON('flag', 'dc-ic')}<div class="dc-t"><b>初心者ミッション</b><span class="bc-n">${begCount()} / 5</span></div>${begReady() ? `<em>${begReady()}</em>` : ''}</button>` : ''}
       ${SV.daily ? `<button class="daily-chip${dailyReady() ? ' ready' : ''}" data-act="daily">${window.RC_ICON('scroll', 'dc-ic')}<div class="dc-t"><b>デイリーミッション</b><span class="pips">${SV.daily.list.map(m => `<i class="${m.got ? 'got' : m.prog >= m.goal ? 'ok' : ''}"></i>`).join('')}</span><small>タップで確認</small></div>${dailyReady() ? `<em>${dailyReady()}</em>` : ''}</button>` : ''}`;
   }
   function renderHud() { $$('.hud').forEach(h => h.innerHTML = hudHtml()); }
@@ -157,7 +158,7 @@
     const T = $('#title'); applyBg();
     T.classList.add('ready', 'menu'); T.classList.remove('seq');
     if (SV.started) refreshDaily();
-    renderHud();
+    renderHud(); if (window.RC_FX) setTimeout(() => RC_FX.menuIn(), 20);
     if (!SV.started) setTimeout(firstRun, 500);
     else setTimeout(() => { if (!$('#modal.on')) checkResume(); }, 400);
   }
@@ -187,7 +188,7 @@
     const d = DECKS[id];
     U.openConfirm(`${d.name}デッキにする？`, `テーマ「${d.theme}」<br>${d.desc}<br><br>ほかのデッキは、あとでショップで手に入る。`, 'これにする', () => {
       SV.owned = [id]; SV.started = true; save();
-      getDeckFx(id, () => toMenu());
+      getDeckFx(id, () => { toMenu(); setTimeout(() => { if (!SV.begShown) { SV.begShown = true; save(); openBeginner(); } }, 900); });
     }, 'gold');
   }
 
@@ -391,6 +392,7 @@
       if (ev === 'puzzle' && m.id === 'puzzle1') add = 1;
       if (add) { m.prog = Math.min(m.goal, m.prog + add); ch = true; }
     });
+    if (SV.daily && SV.daily.list.every(m => m.prog >= m.goal)) { if (!SV.begDaily) { SV.begDaily = true; ch = true; } }
     if (ch) save();
   }
   const dailyReady = () => SV.daily ? SV.daily.list.filter(m => m.prog >= m.goal && !m.got).length + (SV.daily.list.every(m => m.got) && !SV.daily.bonus ? 1 : 0) : 0;
@@ -413,6 +415,36 @@
     const sr = $('#stage').getBoundingClientRect(), k = sr.width / $('#stage').offsetWidth, r = b.getBoundingClientRect();
     for (let i = 0; i < 10; i++) { const c = document.createElement('div'); c.className = 'cburst'; c.style.left = ((r.left + r.width / 2 - sr.left) / k) + 'px'; c.style.top = ((r.top - sr.top) / k) + 'px';
       c.style.setProperty('--x', (Math.random() * 200 - 100) + 'px'); c.style.setProperty('--y', (-60 - Math.random() * 120) + 'px'); c.style.animationDelay = (i * 0.03) + 's'; $('#stage').appendChild(c); setTimeout(() => c.remove(), 1000); }
+  }
+
+  // ---------- 初心者ミッション（5つ・各100コイン・全部で+100） ----------
+  const BEG = [
+    { id: 'win', t: 'CPU戦で1回勝つ', how: '「ひとりでバトル」→「CPUと対戦」', ok: () => (SV.wins || 0) >= 1 },
+    { id: 'buy', t: 'ショップでデッキを1つ買う', how: 'メニューの「ショップ」', ok: () => SV.owned.length >= 2 },
+    { id: 'bg', t: '設定からメニューの背景を変える', how: '「設定」→「メニューの背景」', ok: () => !!SV.bg },
+    { id: 'daily', t: 'デイリーミッションを3つクリアする', how: 'メニュー右上の「デイリーミッション」', ok: () => !!SV.begDaily },
+    { id: 'rank', t: 'CPUランクを足軽2に上げる', how: 'CPU戦で勝って★を集める', ok: () => rankInfo(SV.cpu).lv >= 1 }
+  ];
+  const begSV = () => { SV.beg = SV.beg || { got: [], bonus: false }; return SV.beg; };
+  const begDone = () => { const B = begSV(); return B.bonus && BEG.every(m => B.got.includes(m.id)); };
+  const begCount = () => BEG.filter(m => m.ok()).length;
+  function begReady() { const B = begSV(); return BEG.filter(m => m.ok() && !B.got.includes(m.id)).length; }
+  function openBeginner() {
+    const B = begSV(); const from = SV.coins; let add = 0; const fresh = [];
+    // 達成していたら、開いたときにコインを受け取る
+    BEG.forEach(m => { if (m.ok() && !B.got.includes(m.id)) { B.got.push(m.id); add += 100; fresh.push(m.id); } });
+    const allGot = BEG.every(m => B.got.includes(m.id)); let bonusNow = false;
+    if (allGot && !B.bonus) { B.bonus = true; add += 100; bonusNow = true; }
+    if (add) { SV.coins += add; save(); }
+    U.openModal(`<div class="mtitle">初心者ミッション</div>
+      <div class="mbody daily beg">${BEG.map(m => { const got = B.got.includes(m.id), now = fresh.includes(m.id);
+        return `<div class="dm${got ? ' got' : ''}${now ? ' now' : ''}">${window.RC_ICON(got ? 'check' : 'star', 'bm-ic')}<div class="dm-t">${m.t}<small>${m.how}</small></div>
+          <div class="dm-b${got ? ' done' : ''}">${now ? '<b class="bm-new">+100 ゲット！</b>' : got ? '受け取りずみ' : '<span class="ci-inline"></span>100'}</div></div>`; }).join('')}
+        <div class="dm bonus${B.bonus ? ' got' : ''}${bonusNow ? ' now' : ''}">${window.RC_ICON('crown', 'bm-ic')}<div class="dm-t">ぜんぶクリアのボーナス</div><div class="dm-b${B.bonus ? ' done' : ''}">${bonusNow ? '<b class="bm-new">+100 ゲット！</b>' : B.bonus ? '受け取りずみ' : '<span class="ci-inline"></span>100'}</div></div>
+        <div class="dm-note">${allGot && B.bonus ? '初心者ミッションをすべてクリア！ おめでとう' : '達成したら、ここを開くとコインがもらえる'}</div></div>
+      <div class="mbtns"><button class="btn gold" id="bgClose" data-ico="check">とじる</button></div>`, null, 'big');
+    if (add) { U.SE.play('cheer'); renderHud(); countCoins(from, SV.coins); setTimeout(() => document.querySelectorAll('.dm.now').forEach(el => coinBurst(el)), 250); }
+    $('#bgClose').onclick = () => { U.SE.play('tap'); U.closeModal(); renderHud(); };
   }
 
   // ---------- 対戦モードえらび ----------
@@ -560,6 +592,7 @@
     switch (act) {
       case 'shop': U.SE.play('decide'); openShop(); return true;
       case 'daily': U.SE.play('decide'); openDaily(); return true;
+      case 'beginner': U.SE.play('decide'); openBeginner(); return true;
       case 'toDeck': U.SE.play('decide'); openModes(); return true;
       case 'modeCpu': U.SE.play('decide'); deckFor = null; U.closeModal(); U.show('deck'); $('#deck .deck-head').textContent = 'デッキをえらぶ（CPUと対戦）'; renderDeckList(); return true;
       case 'modeCamp': U.SE.play('decide'); U.closeModal(); if (window.RC_CAMP) window.RC_CAMP.open(); return true;

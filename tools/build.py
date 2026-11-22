@@ -1,7 +1,13 @@
 # 配布用の1ファイルHTML（dist/rekishi-card.html）を作る
 # 使い方：python3 tools/build.py
 # 画像・効果音・フォント（使う文字だけに減らしたもの）をすべて中に入れる
-import base64, os, re, subprocess, sys
+import base64, os, re, subprocess, sys, time
+# URL版（GitHub Pages）で古いJS・CSSがブラウザに残らないように、読みこむファイル名に版番号をつける
+_ver = time.strftime('%Y%m%d%H%M')
+_ix = open('index.html', encoding='utf-8').read()
+_ix = re.sub(r'(src="(?:src|lib)/[^"?]+\.js)(\?v=[^"]*)?"', lambda m: m.group(1) + '?v=' + _ver + '"', _ix)
+_ix = re.sub(r'(href="src/style\.css)(\?v=[^"]*)?"', lambda m: m.group(1) + '?v=' + _ver + '"', _ix)
+open('index.html', 'w', encoding='utf-8').write(_ix)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(ROOT)
 
@@ -47,7 +53,8 @@ js = js.replace("url('img/loc/${L.img}.webp')", "url('${RC_IMG[`img/loc/${L.img}
 _bad = [js[max(0,i-80):i+40] for i in [m.start() for m in re.finditer("'img/", js.replace('"img/', '"IMG/'))]]
 assert not _bad, '置きかえ忘れの画像パスがある: ' + repr(_bad[:3])
 
-html = html.replace('<link rel="stylesheet" href="src/style.css">', '<style>\n' + css + '\n</style>')
+html = re.sub(r'<link rel="stylesheet" href="src/style\.css[^"]*">', lambda m: '<style>\n' + css + '\n</style>', html)
+assert '<style>' in html, 'CSSが入っていない'
 html = re.sub(r'<script src="[^"]+"></script>\n?', '', html)
 html = html.replace('</body>', '<script>\n' + js.replace('</script>', '<\\/script>') + '\n</script>\n</body>')
 os.makedirs('dist', exist_ok=True)

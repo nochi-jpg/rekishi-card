@@ -1218,3 +1218,8 @@ button { font-family: inherit; font-weight: 900; color: inherit; border: 0; back
 .land .modes.three .md-t { align-items: center; text-align: center; } .land .modes.three .mode::after { background: linear-gradient(180deg, rgba(10,8,24,.35), rgba(10,8,24,.9)); }
 .land .modes.three .md-ic { width: 84px; height: 84px; padding: 16px; }
 .port .modes.three .mode { height: 150px !important; }
+.tt-menu .hud .daily-chip, .tt-menu .hud .name-plate { pointer-events: auto; }
+.fr-res2 { display: flex; flex-direction: column; gap: 14px; justify-content: center; } .fr-note { text-align: center; font-size: 14px; color: var(--ink2); } .fr-vsline { text-align: center; font-size: 16px; }
+.fr-res2 .res-meta { position: static; margin: 0 auto; }
+.res-head .mtitle { font-size: 34px; } .res-head.win .mtitle { color: #ffe7a3; text-shadow: 0 0 18px rgba(255,214,120,.9); } .res-head.lose .mtitle { color: #ff9aa8; }
+.fr-res2 .res-meta { width: 100%; height: auto; }

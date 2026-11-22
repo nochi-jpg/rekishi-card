@@ -225,14 +225,14 @@
 
   const MODE = {
     noDecide: true,
-    cpu() {}, // 相手の手は音で受け取る
+    cpu(g) { if (F) F.turnCheck = check(g); }, // 相手の手は音で受け取る。ずれ確認の値はターン開始の盤面で作る
     async exchange(G, ME, rec, handStart) {
       const key = '2:' + G.S.turn;
       const plays = rec.p.map(([u, li]) => [handStart.indexOf(u), li]).filter(x => x[0] >= 0);
-      const myCheck = check(G);
+      const myCheck = F.turnCheck !== undefined ? F.turnCheck : check(G);
       const p = await exchangeFlow(key, () => ({ type: 2, from: F.fpMe, to: F.fpOpp, turn: G.S.turn, decl: rec.d0, retreat: rec.r0, plays, check: myCheck }), `ターン${G.S.turn}の手を交換`, '出したカードと置き場所を音で送ります');
       if (!p) return null;
-      if (p.check !== myCheck) U.banner('同期ずれ？', '2台の盤面がちがうかもしれません。おかしいときは設定から「タイトル画面にもどる」', '', 2600);
+      if (p.check !== myCheck) { window.__rcfWarn = (window.__rcfWarn || 0) + 1; } if (p.check !== myCheck) U.banner('同期ずれ？', '2台の盤面がちがうかもしれません。おかしいときは設定から「タイトル画面にもどる」', '', 2600);
       // あいての手札（ターン開始時）から、出したカードをさがす
       const oppHand = G.S.players[1 - ME].hand.slice();
       return { plays: p.plays.map(([i, li]) => [oppHand[i], li]).filter(x => x[0]), decl: p.decl, retreat: p.retreat };
@@ -242,14 +242,16 @@
       const myR = M.rankInfo(S.pvp || 0), opR = M.rankInfo(G.S.extra.opp.s || 0), decl = G.S.declaredBy >= 0;
       let d = draw ? 0 : win ? (decl ? 4 : 2) + (opR.r >= myR.r + 2 ? 1 : 0) : retreated ? 0 : decl ? -2 : -1;
       const before = S.pvp || 0; let floor = 0; for (let r = 0; r < myR.r; r++) floor += [4, 6, 8, 10, 12, 14, 16][r] * 3;
-      S.pvp = Math.max(floor, before + d); d = S.pvp - before; S.pvpG = (S.pvpG || 0) + 1; if (win) S.pvpW = (S.pvpW || 0) + 1; M.saveNow();
+      S.pvp = Math.max(floor, before + d); d = S.pvp - before; S.pvpG = (S.pvpG || 0) + 1; if (win) S.pvpW = (S.pvpW || 0) + 1;
+      const coins = draw ? 15 : win ? 30 : 10, cfrom = S.coins; S.coins += coins; M.saveNow();
       const aft = M.rankInfo(S.pvp);
-      M.BGM.play(win ? 'win' : 'lose');
-      U.openModal(`<div class="mtitle">${draw ? '引き分け' : win ? '勝利！' : '敗北…'}</div>
-        <div class="mbody fr-res"><div class="pc-em big" style="background-image:url('${aft.img}')"></div>
-        <div><b>対人ランク ${aft.name}</b><span class="${d < 0 ? 'minus' : 'plus'}">★${d >= 0 ? '+' : ''}${d}</span>${retreated ? '<small>撤退したので★は減りません</small>' : ''}${aft.lv > myR.lv ? '<em>ランクアップ！</em>' : ''}</div></div>
-        <div class="mbtns"><button class="btn" id="frEnd" data-ico="home">やめる</button><button class="btn gold" id="frRe" data-ico="retry">デッキを変えて再戦</button></div>`);
-      if (aft.lv > myR.lv) U.SE.play('cheer');
+      const X = { label: '対人ランク', delta: d, coins, cfrom, cto: S.coins, before: myR, after: aft, up: aft.lv > myR.lv, down: aft.lv < myR.lv, newDan: aft.r > myR.r };
+      M.BGM.play(win ? 'win' : 'lose'); U.SE.play(win ? 'cheer' : draw ? 'tap' : 'shock');
+      const title = draw ? '引き分け' : win ? '勝利！' : '敗北…';
+      U.openModal(`<div class="res-head ${win ? 'win' : draw ? 'draw' : 'lose'}"><div class="mtitle">${title}</div></div>
+        <div class="mbody fr-res2">${retreated ? '<div class="fr-note">撤退したので★は減りません</div>' : ''}<div class="fr-vsline">あいて：${G.S.extra.opp.n}（${opR.name}）</div>${M.resultHtml(X)}</div>
+        <div class="mbtns"><button class="btn" id="frEnd" data-ico="home">やめる</button><button class="btn gold" id="frRe" data-ico="retry">デッキを変えて再戦</button></div>`, null, 'big');
+      M.animateResult(X);
       F = F || {}; Object.assign(F, { opp: G.S.extra.opp, oppCode: G.S.extra.oppCode, fpMe: G.S.extra.fpMe, fpOpp: G.S.extra.fpOpp, role: G.S.extra.role, round: G.S.extra.round, code: G.S.extra.code, me: myProfile() });
       $('#frEnd').onclick = () => { U.SE.play('tap'); U.closeModal(); U.setGame(null); M.toMenu(); };
       $('#frRe').onclick = () => { U.SE.play('decide'); U.closeModal(); U.setGame(null); pickDeck(); };

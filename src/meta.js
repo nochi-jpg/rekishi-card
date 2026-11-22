@@ -297,7 +297,7 @@
     const b = x.done ? x.after : x.before;
     return `<div class="res-meta">
       <div class="rm-coin"><div class="ci"></div><span>コイン</span><b data-from="${x.cfrom}" data-to="${x.cto}">${x.cfrom}</b><em>+${x.coins}</em></div>
-      <div class="rm-rank"><div class="em" style="background-image:url('${b.img}')"></div><div class="rt"><div class="rl">CPUランク　<b class="${x.delta < 0 ? 'minus' : 'plus'}">★${x.delta >= 0 ? '+' : ''}${x.delta}</b><span class="gnum">★ ${b.have} / ${b.need}</span></div><div class="rn">${b.name}</div>
+      <div class="rm-rank"><div class="em" style="background-image:url('${b.img}')"></div><div class="rt"><div class="rl">${x.label || 'CPUランク'}　<b class="${x.delta < 0 ? 'minus' : 'plus'}">★${x.delta >= 0 ? '+' : ''}${x.delta}</b><span class="gnum">★ ${b.have} / ${b.need}</span></div><div class="rn">${b.name}</div>
         <div class="gauge big"><i style="width:${pct(b)}%"></i><s></s></div></div></div>
     </div>`;
   }
@@ -589,6 +589,6 @@
     if ($('#starter').classList.contains('on')) openStarter();
     renderHud(); U.fitAll();
   }, 60));
-  window.RC_META = { track, refreshDaily, openDeckFor, renderHud, get SV() { return SV; }, saveNow: () => save(), countCoins, playerName: () => SV.name || '－', openNameInput, openBgPicker, applyBg, openDebug, openStarter, boot, onShow, action, toMenu, openMenu, openShop, openZList, renderDeckList, applyResult, resultHtml, animateResult, owned, isOwned, rankInfo, BGM, get save() { return SV; }, markTutorial() { SV.tutorial = true; save(); }, reset() { U.store.set(SAVE_KEY, null); SV = load(); } };
+  window.RC_META = { rankUpFx, track, refreshDaily, openDeckFor, renderHud, get SV() { return SV; }, saveNow: () => save(), countCoins, playerName: () => SV.name || '－', openNameInput, openBgPicker, applyBg, openDebug, openStarter, boot, onShow, action, toMenu, openMenu, openShop, openZList, renderDeckList, applyResult, resultHtml, animateResult, owned, isOwned, rankInfo, BGM, get save() { return SV; }, markTutorial() { SV.tutorial = true; save(); }, reset() { U.store.set(SAVE_KEY, null); SV = load(); } };
   boot();
 })();

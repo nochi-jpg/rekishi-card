@@ -42,11 +42,11 @@
     const row = (n) => { const d = DECKS[ch.b[n]], ok = unlocked(c, n), done = isDone(c, n), boss = n === 2;
       return `<div class="cp-b${boss ? ' boss' : ''}${ok ? '' : ' locked'}"><div class="cp-bf" style="background-image:url('${IMG(`img/face/${d.face}.webp`)}')"></div>
         <div class="cp-bt"><b>${boss ? 'ボス戦：' + CARDS[d.cards[11]].name : (n + 1) + '戦目：' + d.name + 'デッキ'}</b><span>${boss ? CARDS[d.cards[11]].name + 'のパワー+3' : d.theme}　ほうび ${done ? 10 : boss ? 100 : 30}コイン</span></div>
-        ${ok ? `<button class="btn ${done ? '' : 'gold'}" data-cb="${n}">${done ? 'もう一度' : '挑戦'}</button>` : '<div class="cp-lk">前の戦いに勝つ</div>'}</div>`; };
+        ${ok ? `<button class="btn ${done ? '' : 'gold'}" data-cb="${n}" data-ico="${done ? 'retry' : 'battle'}">${done ? 'もう一度' : '挑戦'}</button>` : '<div class="cp-lk">前の戦いに勝つ</div>'}</div>`; };
     U.openModal(`<div class="mtitle">第${c + 1}章 ${ch.name}</div>
       <div class="mbody cp-body"><div class="cp-rule2"><b>特別ルール「${ch.rn}」</b>${ch.rt}</div>
       <div class="cp-honjii"><div class="hj"></div><p>${ch.intro}</p></div>${[0, 1, 2].map(row).join('')}</div>
-      <div class="mbtns"><button class="btn" data-act="closeModal">もどる</button></div>`, () => openChapter(c), 'big');
+      <div class="mbtns"><button class="btn" data-act="closeModal" data-ico="back">もどる</button></div>`, () => openChapter(c), 'big');
     document.querySelectorAll('[data-cb]').forEach(b => b.onclick = (e) => { e.stopPropagation(); start(c, +b.dataset.cb); });
   }
   function start(c, n) {

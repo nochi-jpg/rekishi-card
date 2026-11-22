@@ -33,7 +33,7 @@ CHECK = r'''() => {
     if (!vis(el)) return; const lh = parseFloat(getComputedStyle(el).lineHeight) || parseFloat(getComputedStyle(el).fontSize) * 1.3;
     if (el.tagName === 'SPAN' && el.getBoundingClientRect().height > lh * 1.6) bad.push('折り返し: ' + el.textContent);
     { const rg = document.createRange(); rg.selectNodeContents(el); if (rg.getBoundingClientRect().width > el.getBoundingClientRect().width + 1) bad.push('ボタンからはみ出し: ' + el.textContent.trim()); }
-    if (el.tagName !== 'SPAN' && !el.querySelector('span,small,b,i,div,img')) { const r = document.createRange(); r.selectNodeContents(el); if (r.getClientRects().length > 1 && r.getBoundingClientRect().height > lh * 1.6) bad.push('折り返し: ' + el.textContent.trim()); }
+    if (el.tagName !== 'SPAN' && !el.querySelector('span,small,b,i,div,img')) { const tn = Array.from(el.childNodes).filter(n => n.nodeType === 3 && n.textContent.trim()); if (tn.length) { const r = document.createRange(); r.setStartBefore(tn[0]); r.setEndAfter(tn[tn.length - 1]); if (r.getClientRects().length > 1 && r.getBoundingClientRect().height > lh * 1.6) bad.push('折り返し: ' + el.textContent.trim()); } }
   });
   // ボタン・カードが画面外に出ていないか
   document.querySelectorAll('.screen.on .btn, .screen.on button, .screen.on .card, #modal.on .btn, .screen.on .tile, .screen.on .panel, #turnBox *, #oppBar *').forEach(el => {

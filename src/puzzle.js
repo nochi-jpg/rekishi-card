@@ -33,12 +33,12 @@
       <div class="mbody pz-body"><div class="cp-honjii"><div class="hj"></div><p>最終ターンじゃ。<b>このターンだけで、3つのうち2つの場所をとれ</b>。<br>相手が出すカードは裏向きで見えておる。引くカードも相手の手も、毎回同じじゃ。</p></div>
       <div class="pz-vs"><div><div class="pz-f" style="background-image:url('${IMG(`img/face/${d.face}.webp`)}')"></div><b>${d.name}デッキ</b>${M.isOwned(p.deck) ? '' : '<small>（レンタル）</small>'}</div><span>VS</span><div><div class="pz-f o" style="background-image:url('${IMG(`img/face/${o.face}.webp`)}')"></div><b>${o.name}デッキ</b></div></div>
       ${isDone(id) ? '<div class="pz-note">クリアずみ（もう一度とけます）</div>' : '<div class="pz-note">はじめてクリアで 20コイン</div>'}</div>
-      <div class="mbtns"><button class="btn" data-act="closeModal">やめる</button><button class="btn gold" id="pzGo">挑戦する</button></div>`);
+      <div class="mbtns"><button class="btn" data-act="closeModal">やめる</button><button class="btn gold" id="pzGo" data-ico="puzzle">挑戦する</button></div>`);
     $('#pzGo').onclick = () => { U.closeModal(); start(id); };
   }
   function start(id) {
     const p = PZ.find(x => x.id === id);
-    window.RC_UI.resumeGame({ v: 1, deck: p.deck, cpu: p.opp, seed: p.seed, o: { mode: 'puzzle', extra: { id } }, turns: p.pre }, '歴史パズル No.' + id, 'このターンで2つの場所をとれ！');
+    window.RC_UI.resumeGame({ v: 1, deck: p.deck, cpu: p.opp, seed: p.seed, o: { mode: 'puzzle', extra: { id } }, turns: JSON.parse(JSON.stringify(p.pre)) }, '歴史パズル No.' + id, 'このターンで2つの場所をとれ！');
   }
   const MODE = {
     noDecide: true,

@@ -44,7 +44,7 @@
         <div class="rt"><div class="rl">対人ランク</div><div class="rn">${p.name}</div>${bar(p)}<div class="rs">2台対戦で上がる</div></div></div>
       <div class="coin-box"><div class="ci"></div><b id="coinNum">${SV.coins}</b></div>
       <div class="name-plate"><small>なまえ</small><b>${SV.name || '－'}</b></div>
-      ${SV.daily ? `<button class="daily-chip${dailyReady() ? ' ready' : ''}" data-act="daily"><b>デイリー</b><span>${SV.daily.list.filter(m => m.prog >= m.goal).length} / 3</span>${dailyReady() ? '<i>!</i>' : ''}</button>` : ''}`;
+      ${SV.daily ? `<button class="daily-chip${dailyReady() ? ' ready' : ''}" data-act="daily">${window.RC_ICON('scroll', 'dc-ic')}<div class="dc-t"><b>デイリーミッション</b><span class="pips">${SV.daily.list.map(m => `<i class="${m.got ? 'got' : m.prog >= m.goal ? 'ok' : ''}"></i>`).join('')}</span><small>タップで確認</small></div>${dailyReady() ? `<em>${dailyReady()}</em>` : ''}</button>` : ''}`;
   }
   function renderHud() { $$('.hud').forEach(h => h.innerHTML = hudHtml()); }
 
@@ -71,7 +71,13 @@
   };
 
   // ---------- 画面ごとの処理 ----------
+  // もどるボタンは、どの画面でも左上の同じ場所（共通のボタン）
+  const BACK_SCREENS = ['deck', 'zlist', 'zukan', 'shop', 'camp', 'puzzle', 'friend'];
+  let backFn = null;
+  function setBack(fn) { backFn = fn; }
   function onShow(id) {
+    const bb = $('#backBtn'); if (bb) bb.classList.toggle('on', BACK_SCREENS.includes(id));
+    if (id !== 'deck') backFn = null;
     stage.classList.toggle('on-title', id === 'title');
     if (id === 'deck' && !deckFor) { const h = $('#deck .deck-head'); if (h && !h.dataset.keep) h.textContent = 'デッキをえらぶ'; }
     if (id === 'title' || id === 'starter' || id === 'deck' || id === 'camp' || id === 'puzzle') BGM.play('menu');
@@ -221,7 +227,7 @@
   }
   function renderShop() {
     $('#shopHead').innerHTML = `<div class="sp-title">ショップ</div><div class="sp-sub">次の入荷まで ${nextRestock()}　（手に入れたデッキは並ばない）</div>
-      <div class="hud mini" id="shopHud"></div><button class="btn" data-act="toTitle">もどる</button>`;
+      <div class="hud mini" id="shopHud"></div>`;
     renderHud();
     const stock = SV.shop.stock;
     if (!stock.length) { $('#shopGrid').innerHTML = `<div class="sp-empty">すべてのデッキを集めた！<br>天下統一おめでとう</div>`; return; }
@@ -231,8 +237,8 @@
         <div class="si-img" style="background-image:url('${IMG(`img/face/${d.face}.webp`)}')"></div><div class="si-shade"></div>
         <div class="si-era">${d.era}</div><div class="si-name fit">${d.name}</div><div class="si-theme fit">「${d.theme}」${U.layout === 'land' ? d.desc : ''}</div>
         <div class="si-price"><i class="ci"></i>${price}</div>
-        <div class="si-btns"><button class="btn" data-act="shopView" data-deck="${id}">カード</button>
-          ${got ? '<div class="si-got">入手ずみ</div>' : `<button class="btn ${can ? 'gold' : ''}" data-act="shopBuy" data-deck="${id}" ${can ? '' : 'disabled'}>${can ? '買う' : 'コイン不足'}</button>`}</div>
+        <div class="si-btns"><button class="btn" data-act="shopView" data-deck="${id}" data-ico="cards">カード</button>
+          ${got ? '<div class="si-got">入手ずみ</div>' : `<button class="btn ${can ? 'gold' : ''}" data-act="shopBuy" data-ico="coin" data-deck="${id}" ${can ? '' : 'disabled'}>${can ? '買う' : 'コイン不足'}</button>`}</div>
       </div>`; }).join('');
     U.fitAll($('#shop'));
   }
@@ -410,14 +416,15 @@
   // ---------- 対戦モードえらび ----------
   let deckFor = null;
   function openModes() {
-    const M = (act, t, sub, cls) => `<button class="mode ${cls || ''}" data-act="${act}"><b>${t}</b><span>${sub}</span></button>`;
-    U.openModal(`<div class="mtitle">対戦</div><div class="mbody modes">
-      ${M('modeCpu', 'CPUと対戦', 'デッキをえらんで勝負。CPUランクが上がる', 'gold')}${M('modeCamp', '時代めぐり', '時代ごとの特別ルールで戦う')}
-      ${M('modePuzzle', '歴史パズル', '決まった場面から勝ちを考える')}${M('modeFriend', '友達と対戦', '2台で音を使って対戦。対人ランクが上がる')}</div>
-      <div class="mbtns"><button class="btn" data-act="closeModal">もどる</button></div>`, openModes);
+    const M = (act, ic, bg, t, sub, cls, badge) => `<button class="mode ${cls || ''}" data-act="${act}"><div class="md-bg" style="background-image:url('${IMG(`img/menubg/${bg}.webp`)}')"></div>${window.RC_ICON(ic, 'md-ic')}<div class="md-t"><b>${t}${badge ? `<em>${badge}</em>` : ''}</b><span>${sub}</span></div></button>`;
+    const pz = (SV.puzzle && SV.puzzle.done.length) || 0, cp = (SV.camp && SV.camp.done.length) || 0;
+    U.openModal(`<div class="mtitle">対戦モード</div><div class="mbody modes">
+      ${M('modeCpu', 'cpu', 'nobunaga', 'CPUと対戦', 'デッキをえらんで勝負。CPUランクが上がる', 'gold')}${M('modeCamp', 'map', 'himiko', '時代めぐり', '7つの時代を特別ルールで旅する', '', cp + ' / 21')}
+      ${M('modePuzzle', 'puzzle', 'genpaku', '歴史パズル', '最終ターン、1手で勝ちを見つけよう', '', pz + ' / 19')}${M('modeFriend', 'friends', 'saigo', '友達と対戦', '2台で音を使って対戦。対人ランクが上がる')}</div>
+      <div class="mbtns"><button class="btn" data-act="closeModal" data-ico="back">もどる</button></div>`, openModes, 'big');
   }
   function openDeckFor(purpose, head, cb) {
-    deckFor = { purpose, cb }; U.closeModal(); U.show('deck'); $('#deck .deck-head').textContent = head || 'デッキをえらぶ'; renderDeckList();
+    deckFor = { purpose, cb }; backFn = purpose === 'camp' ? () => window.RC_CAMP.open() : purpose === 'friend' ? () => window.RC_FRIEND.open() : null; U.closeModal(); U.show('deck'); $('#deck .deck-head').textContent = head || 'デッキをえらぶ'; renderDeckList();
   }
 
   // ---------- 試合のつづき ----------
@@ -566,6 +573,14 @@
     return false;
   }
 
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#backBtn')) return;
+    U.SE.play('tap'); const cur = document.querySelector('.screen.on'); const id = cur && cur.id;
+    if (id === 'zukan') return window.RC_UI.action('zkBack');
+    if (id === 'friend' && window.RC_FRIEND) window.RC_FRIEND.stopCam();
+    if (id === 'deck' && backFn) { const f = backFn; backFn = null; deckFor = null; return f(); }
+    deckFor = null; toMenu();
+  });
   window.addEventListener('resize', () => setTimeout(() => {
     if ($('#shop').classList.contains('on')) renderShop();
     if ($('#zlist').classList.contains('on')) openZList();

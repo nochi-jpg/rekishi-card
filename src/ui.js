@@ -156,6 +156,7 @@
     ME = R.me || 0; OP = 1 - ME;
     myDeck = R.deck; cpuDeck = R.cpu; RES = R;
     G = rebuild(R);
+    if (G.S.over || G.S.turn >= 6) { clearResume(); RES = null; if (window.RC_META) RC_META.toMenu(); return; } // 終わった試合は再開しない
     V = { resolving: false, rev: new Set(), snap: G.snap(), hide: new Set(), oppShown: false, locShown: [0, 1, 2].map(li => G.S.turn >= li + 1), disp: null };
     log = { combos: [] }; sel = null; busy = true;
     show('game'); renderAll(); camera(-1, 1, 1, 10);
@@ -276,9 +277,9 @@
     const anyPlayable = !busy && G.S.players[ME].hand.some(u => [0, 1, 2].some(li => G.canPlay(ME, u, li)));
     const bonus = G.S.turn ? G.S.players[ME].energyBonus : 0;
     $('#ctrl').innerHTML = `<div class="orb${left <= 0 ? ' zero' : ''}${bonus ? ' bonus' : ''}"><b>${left}</b><small>${bonus ? 'エネルギー+' + bonus : 'エネルギー'}</small></div>
-      <button class="btn gold b-end${!busy && !anyPlayable ? ' pulse' : ''}" data-act="end" ${busy ? 'disabled' : ''}>ターン終了</button>
-      <button class="btn blue b-decl" data-act="declare" ${busy || !G.canDeclare(ME) ? 'disabled' : ''}>${G.S.declaredBy === ME ? '宣言中<span>★+4/-2</span>' : `天下取り<span>${layout === 'land' ? '★+4/-2 3ターンまで' : '★+4/-2'}</span>`}</button>
-      <button class="btn red b-ret" data-act="retreat" ${busy || !G.canRetreat(ME) ? 'disabled' : ''}>撤退<span>${G.S.declaredBy === ME ? (layout === 'land' ? '宣言中はできない' : 'できない') : (layout === 'land' ? '★0 3ターンまで' : '★0')}</span></button>`;
+      <button data-ico="check" class="btn gold b-end${!busy && !anyPlayable ? ' pulse' : ''}" data-act="end" ${busy ? 'disabled' : ''}>ターン終了</button>
+      <button data-ico="crown" class="btn blue b-decl" data-act="declare" ${busy || !G.canDeclare(ME) ? 'disabled' : ''}>${G.S.declaredBy === ME ? '宣言中<span>★+4/-2</span>' : `天下取り<span>${layout === 'land' ? '★+4/-2 3ターンまで' : '★+4/-2'}</span>`}</button>
+      <button data-ico="flag" class="btn red b-ret" data-act="retreat" ${busy || !G.canRetreat(ME) ? 'disabled' : ''}>撤退<span>${G.S.declaredBy === ME ? (layout === 'land' ? '宣言中はできない' : 'できない') : (layout === 'land' ? '★0 3ターンまで' : '★0')}</span></button>`;
   }
 
   function renderDetail() {
@@ -800,8 +801,7 @@
   let zk = { deck: 0, card: 0, from: 'title' };
   function renderZukan() {
     const ids = Object.keys(DECKS), d = DECKS[ids[zk.deck]];
-    $('#zkTop').innerHTML = `<button class="btn" data-act="zkBack">もどる</button>
-      <div class="zf" style="background-image:url('img/face/${d.face}.webp')"></div>
+    $('#zkTop').innerHTML = `<div class="zf" style="background-image:url('img/face/${d.face}.webp')"></div>
       <div class="zt"><div class="zn fit">${d.name}</div><div class="ze fit">${d.era}時代・「${d.theme}」${layout === 'land' ? '　' + d.desc : ''}　${zk.from === 'shop' ? 'ショップの品' : ''}</div></div>
       ${zk.from === 'shop' ? '' : `<button class="btn" data-act="zkPrev">${layout === 'land' ? '前の人物' : '前へ'}</button><button class="btn" data-act="zkNext">${layout === 'land' ? '次の人物' : '次へ'}</button>`}`;
     $('#zkGrid').innerHTML = d.cards.map((cid, i) => { const c = CARDS[cid]; return `<div class="card hc zkhc${i === zk.card ? ' on' : ''}${c.leader || isFace(c) ? ' leader' : ''}" data-act="zkCard" data-i="${i}">${handInner(c, c.power)}</div>`; }).join('');
@@ -851,12 +851,13 @@
   document.addEventListener('fullscreenchange', () => setTimeout(fitStage, 120));
   document.addEventListener('webkitfullscreenchange', () => setTimeout(fitStage, 120));
   function openSettings(fromMenu) {
-    const row = (id, label, on) => `<div class="setrow"><span>${label}</span><button class="btn ${on ? 'gold' : ''}" id="${id}">${on ? 'オン' : 'オフ'}</button></div>`;
-    const act = (id, label, b, cls) => `<div class="setrow"><span>${label}</span><button class="btn ${cls || ''}" id="${id}">${b}</button></div>`;
-    const rows = [row('sSnd', '効果音', SE.on), row('sBgm', 'BGM', RC_META.BGM.on), row('sLbl', '「コスト」「パワー」の文字', showLabels), row('s3d', '3D表示（重いときはオフ）', use3d)];
-    if (fsOK()) rows.push(act('sFull', '全画面表示', fsEl() ? 'もどす' : '全画面', fsEl() ? 'gold' : ''));
-    if (G) rows.push(act('sQuit', 'タイトル画面にもどる（試合は放棄）', 'もどる', 'red'));
-    else rows.push(act('sBg', 'メニューの背景', 'えらぶ'), act('sName', '名前：' + RC_META.playerName(), 'かえる'), act('sTut', 'チュートリアル', '見る'));
+    const IC = (n) => window.RC_ICON(n, 'srow');
+    const row = (id, ic, label, on) => `<div class="setrow">${IC(ic)}<span>${label}</span><button class="btn tog ${on ? 'gold on' : ''}" id="${id}"><i></i>${on ? 'オン' : 'オフ'}</button></div>`;
+    const act = (id, ic, label, b, cls) => `<div class="setrow">${IC(ic)}<span>${label}</span><button class="btn ${cls || ''}" id="${id}">${b}</button></div>`;
+    const rows = [row('sSnd', 'sound', '効果音', SE.on), row('sBgm', 'music', 'BGM', RC_META.BGM.on), row('sLbl', 'label', 'コスト・パワーの文字', showLabels), row('s3d', 'cube', '3D表示（重いときはオフ）', use3d)];
+    if (fsOK()) rows.push(act('sFull', 'full', '全画面表示', fsEl() ? 'もどす' : '全画面', fsEl() ? 'gold' : ''));
+    if (G) rows.push(act('sQuit', 'home', 'タイトル画面にもどる（試合は放棄）', 'もどる', 'red'));
+    else rows.push(act('sBg', 'palette', 'メニューの背景', 'えらぶ'), act('sName', 'pen', '名前：' + RC_META.playerName(), 'かえる'), act('sTut', 'help', 'チュートリアル', '見る'));
     openModal(`<div class="mtitle" id="sTitle">設定</div>
       <div class="mbody setbody${rows.length > 5 ? ' many' : ''}">${rows.join('')}</div>
       <div class="mbtns"><button class="btn gold" id="sBack">${fromMenu ? 'もどる' : 'とじる'}</button></div>`, () => openSettings(fromMenu), rows.length > 5 ? 'big' : '');
@@ -906,13 +907,14 @@
   }
   function openHowto(i, fromMenu) {
     const pg = HOWTO[i];
-    openModal(`<div class="mtitle">${pg[0]}</div>${pg[1] ? `<div class="mbody">${howtoPage(pg)}</div>` : `<div class="mbody">${cardGuide()}</div>`}
+    openModal(`<button class="mclose" id="hX" aria-label="とじる">${window.RC_ICON('close')}</button><div class="mtitle">${pg[0]}</div>${pg[1] ? `<div class="mbody">${howtoPage(pg)}</div>` : `<div class="mbody">${cardGuide()}</div>`}
       <div class="dots">${HOWTO.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
-      <div class="mbtns"><button class="btn" id="hPrev" ${i === 0 ? 'disabled' : ''}>まえへ</button>
-      ${i < HOWTO.length - 1 ? '<button class="btn gold" id="hNext">つぎへ</button>' : `<button class="btn gold" id="hClose">とじる</button>`}</div>`, () => openHowto(i, fromMenu), 'big');
+      <div class="mbtns"><button class="btn" id="hPrev" data-ico="back" ${i === 0 ? 'disabled' : ''}>まえへ</button>
+      ${i < HOWTO.length - 1 ? '<button class="btn gold" id="hNext" data-ico="next">つぎへ</button>' : `<button class="btn gold" id="hClose">とじる</button>`}</div>`, () => openHowto(i, fromMenu), 'big');
     if ($('#hPrev')) $('#hPrev').onclick = () => { SE.play('tap'); openHowto(i - 1, fromMenu); };
     if ($('#hNext')) $('#hNext').onclick = () => { SE.play('tap'); openHowto(i + 1, fromMenu); };
     if ($('#hClose')) $('#hClose').onclick = () => { SE.play('tap'); if (fromMenu && G) openMenu(); else closeModal(); };
+    $('#hX').onclick = () => { SE.play('tap'); if (fromMenu && G) openMenu(); else closeModal(); };
   }
 
   // 勝ったデッキの主役が話す
@@ -961,7 +963,7 @@
       const m = a > b ? '<span class="w">勝</span>' : b > a ? '<span class="l">負</span>' : '分';
       return `<div class="res-loc"><span class="rn fit">${G.loc(li).name}</span><span class="rs">${a} - ${b}　${m}</span></div>`;
     }).join('');
-    const maxC = layout === 'land' ? 3 : 4;
+    const maxC = layout === 'land' ? 3 : 2;
     const cl = log.combos.slice(0, maxC).map(c => `<div class="ci"><b>${c.a} × ${c.b}</b>${c.memo}</div>`).join('');
     const more = log.combos.length > maxC ? `<div style="color:var(--ink2)">ほか ${log.combos.length - maxC} 件</div>` : '';
     const title = r.retreat !== undefined ? (win ? '相手が撤退' : '撤退') : (win ? '勝利' : draw ? '引き分け' : '敗北');
@@ -970,7 +972,7 @@
         <div class="res-stars">${X.delta === 0 ? '★の増減なし' : (X.delta > 0 ? '★+' + X.delta : '★' + X.delta)}${G.S.declaredBy >= 0 && r.retreat === undefined ? '（宣言）' : ''}</div>
         <div class="res-locs">${locs}</div>${RC_META.resultHtml(X)}
         <div class="res-combos fitb"><h4>この試合の史実コンボ</h4>${cl || '<div style="color:var(--ink2)">史実コンボは出なかった。歴史でつながるカードを同じ場所に置いてみよう</div>'}${more}</div>
-        <div class="mbtns"><button class="btn" data-act="resMenu">メニュー</button><button class="btn" data-act="deckAgain">デッキ変更</button><button class="btn gold" data-act="again">もう一度</button></div>`, () => { fn(); });
+        <div class="mbtns"><button class="btn" data-act="resMenu" data-ico="home">メニュー</button><button class="btn" data-act="deckAgain" data-ico="cards">デッキ変更</button><button class="btn gold" data-act="again" data-ico="retry">もう一度</button></div>`, () => { fn(); });
       if (win) for (let i = 0; i < 40; i++) {
         const c = document.createElement('div'); c.className = 'confetti';
         c.style.left = Math.random() * 100 + '%'; c.style.background = ['#ffe7a3', '#e8c36a', '#8fd0ff', '#ff9aa8', '#fff'][i % 5];

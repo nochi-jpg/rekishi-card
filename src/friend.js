@@ -105,13 +105,14 @@
   // ---------- プロフィール ----------
   function myProfile() {
     const S = M.SV; S.fid = S.fid || ((Math.random() * 0xffffff) | 0).toString(16);
-    return { n: S.name || 'なし', s: S.pvp || 0, w: S.pvpW || 0, g: S.pvpG || 0, id: S.fid };
+    return { n: S.name || 'なし', s: S.pvp || 0, w: S.pvpW || 0, g: S.pvpG || 0, id: S.fid, b: S.bg && M.isOwned(S.bg) ? S.bg : '' };
   }
   const profCode = (p) => 'RC1.' + b64.enc(utf8.enc(JSON.stringify(p)));
   function parseProf(t) { if (!t || !t.startsWith('RC1.')) return null; try { const p = JSON.parse(utf8.dec(b64.dec(t.slice(4)))); return p && p.id ? p : null; } catch (e) { return null; } }
   function profCard(p, cls, qr) {
     const r = M.rankInfo(p.s), rate = p.g ? Math.round(p.w / p.g * 100) + '%' : '－';
-    return `<div class="pcard ${cls || ''}"><div class="pc-head">${cls === 'opp' ? 'あいて' : 'あなた'}のプロフィール</div>
+    const bg = p.b && DECKS[p.b] ? IMG(`img/menubg/${p.b}.webp`) : IMG(`img/ui/title_bg.webp`);
+    return `<div class="pcard ${cls || ''}"><div class="pc-bg" style="background-image:url('${bg}')"></div><div class="pc-head">${cls === 'opp' ? 'あいて' : 'あなた'}のプロフィール</div>
       <div class="pc-main"><div class="pc-em" style="background-image:url('${r.img}')"></div><div class="pc-t"><b>${p.n}</b><span>対人ランク ${r.name}</span><span>勝率 ${rate}（${p.w}勝 / ${p.g}戦）</span></div></div>
       ${qr ? `<img class="pc-qr" src="${qr}" alt="QR">` : ''}</div>`;
   }
@@ -144,8 +145,7 @@
     B.innerHTML = `<div class="fr-cards">${profCard(F.me, 'me', QR.make(F.code, 6))}
         <div class="fr-opp">${F.opp ? profCard(F.opp, 'opp') : `<div class="fr-cam"><video id="frVideo" playsinline muted></video><div class="fr-cam-msg" id="frCamMsg">「カメラで読む」か「画像から読む」で、あいてのQRを読みこんでね</div></div>`}</div></div>
       <div class="fr-msg" id="frMsg">${msg || (F.opp ? 'おたがいにQRを読んだら「すすむ」を押してね' : 'あいてにも、あなたのQRを読んでもらってね')}</div>
-      <div class="fr-btns"><button class="btn" id="frBack">もどる</button><button class="btn" id="frCam">カメラで読む</button><button class="btn" id="frImg">画像から読む</button><button class="btn gold" id="frGo" ${F.opp ? '' : 'disabled'}>すすむ</button></div>`;
-    $('#frBack').onclick = () => { U.SE.play('tap'); QR.stop(); M.toMenu(); };
+      <div class="fr-btns"><button class="btn" id="frCam" data-ico="camera">カメラで読む</button><button class="btn" id="frImg" data-ico="image">画像から読む</button><button class="btn gold" id="frGo" data-ico="next" ${F.opp ? '' : 'disabled'}>すすむ</button></div>`;
     $('#frCam').onclick = () => { U.SE.play('tap'); if (F.opp) { F.opp = null; renderProfile(); } const v = $('#frVideo'); if (v) QR.startCamera(v, accept, (t) => { const m = $('#frCamMsg'); if (m) { m.textContent = t; m.style.display = t.includes('見せて') ? 'none' : 'flex'; } }); };
     $('#frImg').onclick = async () => { U.SE.play('tap'); const f = await pickImage(); if (!f) return; try { accept(await QR.fromFile(f)); } catch (e) { $('#frMsg').textContent = e.message; U.SE.play('ng'); } };
     $('#frGo').onclick = () => { U.SE.play('decide'); QR.stop(); pickDeck(); };
@@ -247,7 +247,7 @@
       U.openModal(`<div class="mtitle">${draw ? '引き分け' : win ? '勝利！' : '敗北…'}</div>
         <div class="mbody fr-res"><div class="pc-em big" style="background-image:url('${aft.img}')"></div>
         <div><b>対人ランク ${aft.name}</b><span class="${d < 0 ? 'minus' : 'plus'}">★${d >= 0 ? '+' : ''}${d}</span>${retreated ? '<small>撤退したので★は減りません</small>' : ''}${aft.lv > myR.lv ? '<em>ランクアップ！</em>' : ''}</div></div>
-        <div class="mbtns"><button class="btn" id="frEnd">やめる</button><button class="btn gold" id="frRe">デッキを変えて再戦</button></div>`);
+        <div class="mbtns"><button class="btn" id="frEnd" data-ico="home">やめる</button><button class="btn gold" id="frRe" data-ico="retry">デッキを変えて再戦</button></div>`);
       if (aft.lv > myR.lv) U.SE.play('cheer');
       F = F || {}; Object.assign(F, { opp: G.S.extra.opp, oppCode: G.S.extra.oppCode, fpMe: G.S.extra.fpMe, fpOpp: G.S.extra.fpOpp, role: G.S.extra.role, round: G.S.extra.round, code: G.S.extra.code, me: myProfile() });
       $('#frEnd').onclick = () => { U.SE.play('tap'); U.closeModal(); U.setGame(null); M.toMenu(); };
@@ -275,7 +275,7 @@
   function openTransfer() {
     U.openModal(`<div class="mtitle">セーブの引き継ぎ</div>
       <div class="mbody tr-body"><img class="tr-qr" src="${QR.make(saveCode(), 5)}" alt="QR"><div class="tr-t">このQRを新しい端末で読むと、名前・デッキ・コイン・ランク・勝率・進み具合を引き継げます。<br>（新しい端末でもデバッグモードの「引き継ぎQRを読む」から）</div></div>
-      <div class="mbtns"><button class="btn" id="trCam">カメラで読む</button><button class="btn" id="trImg">画像から読む</button><button class="btn gold" data-act="closeModal">とじる</button></div>`, openTransfer, 'big');
+      <div class="mbtns"><button class="btn" id="trCam" data-ico="camera">カメラで読む</button><button class="btn" id="trImg" data-ico="image">画像から読む</button><button class="btn gold" data-act="closeModal">とじる</button></div>`, openTransfer, 'big');
     $('#trImg').onclick = async () => { const f = await pickImage(); if (!f) return; try { importSave(await QR.fromFile(f)); } catch (e) { U.openConfirm('読めませんでした', e.message, 'もどる', () => openTransfer(), 'gold'); } };
     $('#trCam').onclick = () => {
       U.openModal(`<div class="mtitle">引き継ぎQRを読む</div><div class="mbody"><div class="fr-cam"><video id="trVideo" playsinline muted></video><div class="fr-cam-msg" id="trMsg"></div></div></div>
@@ -295,5 +295,5 @@
 
   window.RC_MODES = window.RC_MODES || {};
   window.RC_MODES.friend = MODE;
-  window.RC_FRIEND = { open, resume, openTransfer, _test: { accept, encPkt, decPkt, onPacket, get F() { return F; }, set F(v) { F = v; }, inbox, profCode, parseProf, hash16, saveCode, loadCode, startGame } };
+  window.RC_FRIEND = { stopCam: () => QR.stop(), open, resume, openTransfer, _test: { accept, encPkt, decPkt, onPacket, get F() { return F; }, set F(v) { F = v; }, inbox, profCode, parseProf, hash16, saveCode, loadCode, startGame } };
 })();

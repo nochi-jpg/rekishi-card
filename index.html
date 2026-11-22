@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>歴史カードバトル</title>
-<link rel="stylesheet" href="src/style.css?v=202611222002">
+<link rel="stylesheet" href="src/style.css?v=202611222026">
 </head>
 <body>
 <canvas id="bgfx"></canvas>
@@ -30,11 +30,11 @@
     <div class="tt-menu">
       <div class="hud" id="menuHud"></div>
       <div class="mm-list">
-        <button class="mm gold" data-act="toDeck"><b>対戦</b><span>CPU・時代めぐり・パズル・友達</span></button>
-        <button class="mm" data-act="shop"><b>ショップ</b><span>デッキを手に入れる</span></button>
-        <button class="mm" data-act="zukan"><b>カード図鑑</b><span>集めたカードを見る</span></button>
-        <button class="mm" data-act="howto"><b>あそびかた</b><span>ルールを読む</span></button>
-        <button class="mm" data-act="settings"><b>設定</b><span>音・表示</span></button>
+        <button class="mm gold" data-act="toDeck"><i class="mm-ic" data-ico="battle"></i><div class="mm-t"><b>対戦</b><span>CPU・時代めぐり・パズル・友達</span></div></button>
+        <button class="mm " data-act="shop"><i class="mm-ic" data-ico="shop"></i><div class="mm-t"><b>ショップ</b><span>デッキを手に入れる</span></div></button>
+        <button class="mm " data-act="zukan"><i class="mm-ic" data-ico="book"></i><div class="mm-t"><b>カード図鑑</b><span>集めたカードを見る</span></div></button>
+        <button class="mm " data-act="howto"><i class="mm-ic" data-ico="help"></i><div class="mm-t"><b>あそびかた</b><span>ルールを読む</span></div></button>
+        <button class="mm " data-act="settings"><i class="mm-ic" data-ico="gear"></i><div class="mm-t"><b>設定</b><span>音・表示・名前・背景</span></div></button>
       </div>
     </div>
     <div class="title-foot">テスト版 v0.6　K.nom</div>
@@ -61,8 +61,7 @@
     <div class="deck-head">デッキをえらぶ</div>
     <div class="deck-list" id="deckList"></div>
     <div class="deck-foot">
-      <button class="btn" data-act="toTitle">もどる</button>
-      <button class="btn" data-act="shop">ショップ</button>
+            <button class="btn" data-act="shop" data-ico="shop">ショップ</button>
     </div>
   </section>
 
@@ -71,13 +70,13 @@
     <div class="title-bg dim"></div>
     <div class="deck-head">時代めぐり</div>
     <div class="cp-list" id="campList"></div>
-    <div class="deck-foot"><button class="btn" data-act="toTitle">もどる</button></div>
+    <div class="deck-foot"></div>
   </section>
   <section id="puzzle" class="screen">
     <div class="title-bg dim"></div>
     <div class="deck-head">歴史パズル</div>
     <div class="pz-list" id="pzList"></div>
-    <div class="deck-foot pz-foot"><button class="btn" id="pzPrev">まえへ</button><span class="pgno" id="pzPage"></span><button class="btn" id="pzNext">つぎへ</button><button class="btn" data-act="toTitle">もどる</button></div>
+    <div class="deck-foot pz-foot"><button class="btn" id="pzPrev" data-ico="back">まえへ</button><span class="pgno" id="pzPage"></span><button class="btn" id="pzNext" data-ico="next">つぎへ</button></div>
   </section>
   <section id="friend" class="screen">
     <div class="title-bg dim"></div>
@@ -89,8 +88,7 @@
     <div class="deck-head">カード図鑑</div>
     <div class="deck-list" id="zlistList"></div>
     <div class="deck-foot">
-      <button class="btn" data-act="toTitle">もどる</button>
-      <button class="btn" data-act="shop">ショップ</button>
+            <button class="btn" data-act="shop" data-ico="shop">ショップ</button>
     </div>
   </section>
 
@@ -113,24 +111,26 @@
     <div id="hand"></div>
   </section>
 
+  <button id="backBtn" class="btn" data-ico="back">もどる</button>
   <div id="fx"></div>
   <div id="modal"></div>
 </div>
 
-<script src="lib/se.js?v=202611222002"></script>
-<script src="src/data.js?v=202611222002"></script>
-<script src="src/engine.js?v=202611222002"></script>
-<script src="src/ui.js?v=202611222002"></script>
-<script src="src/meta.js?v=202611222002"></script>
-<script src="src/tutorial.js?v=202611222002"></script>
-<script src="src/lines.js?v=202611222002"></script>
-<script src="src/howto.js?v=202611222002"></script>
-<script src="src/camp.js?v=202611222002"></script>
-<script src="src/puzzles.js?v=202611222002"></script>
-<script src="src/puzzle.js?v=202611222002"></script>
-<script src="lib/ggwave.js?v=202611222002"></script>
-<script src="lib/jsQR.min.js?v=202611222002"></script>
-<script src="lib/qrcode.min.js?v=202611222002"></script>
-<script src="src/friend.js?v=202611222002"></script>
+<script src="lib/se.js?v=202611222026"></script>
+<script src="src/data.js?v=202611222026"></script>
+<script src="src/engine.js?v=202611222026"></script>
+<script src="src/icons.js?v=202611222026"></script>
+<script src="src/ui.js?v=202611222026"></script>
+<script src="src/meta.js?v=202611222026"></script>
+<script src="src/tutorial.js?v=202611222026"></script>
+<script src="src/lines.js?v=202611222026"></script>
+<script src="src/howto.js?v=202611222026"></script>
+<script src="src/camp.js?v=202611222026"></script>
+<script src="src/puzzles.js?v=202611222026"></script>
+<script src="src/puzzle.js?v=202611222026"></script>
+<script src="lib/ggwave.js?v=202611222026"></script>
+<script src="lib/jsQR.min.js?v=202611222026"></script>
+<script src="lib/qrcode.min.js?v=202611222026"></script>
+<script src="src/friend.js?v=202611222026"></script>
 </body>
 </html>

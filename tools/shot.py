@@ -63,7 +63,18 @@ async def main():
             await pg.evaluate("RC_UI.action('closeModal')")
             await pg.evaluate("RC_UI.action('toDeck')"); await pg.wait_for_timeout(600)
             await pg.screenshot(path=f'{OUT}/{name}_2deck.png'); allbad[name+'_deck'] = await pg.evaluate(CHECK)
-            await pg.evaluate("RC_UI.newGame('himiko')")
+            await pg.evaluate("RC_UI.action('zukan')"); await pg.wait_for_timeout(500)
+            await pg.screenshot(path=f'{OUT}/{name}_2zukan.png'); allbad[name+'_zukan'] = await pg.evaluate(CHECK)
+            for k in range(19):
+                await pg.evaluate("RC_UI.action('zkNext')"); await pg.wait_for_timeout(60)
+                for ci in (0, 11):
+                    await pg.evaluate(f"(() => {{ const el = document.querySelector('#zkGrid [data-i=\"{ci}\"]'); RC_UI.action('zkCard', el); }})()"); await pg.wait_for_timeout(40)
+                    b = await pg.evaluate(CHECK)
+                    if b: allbad[f'{name}_zukan{k}_{ci}'] = b
+            await pg.screenshot(path=f'{OUT}/{name}_2zukan2.png')
+            await pg.evaluate("RC_UI.action('zkBack')")
+            await pg.evaluate("RC_UI.fast(true)")
+            await pg.evaluate("RC_UI.newGame(['michinaga','shomu','iemitsu','saigo'][%d %% 4])" % len(allbad))
             # ゲームを自動で最後まで進める（毎ターン、置けるカードを置く）
             for t in range(1, 7):
                 for _ in range(80):
@@ -80,7 +91,7 @@ async def main():
                 if t == 5:
                     await pg.screenshot(path=f'{OUT}/{name}_3game_t{t}.png'); allbad[name+f'_game{t}'] = await pg.evaluate(CHECK)
                 await pg.evaluate("RC_UI.endTurn()")
-                await pg.wait_for_timeout(300)
+                await pg.wait_for_timeout(100)
                 if t == 4:
                     await pg.wait_for_timeout(1500); await pg.screenshot(path=f'{OUT}/{name}_4resolve.png')
             for _ in range(120):

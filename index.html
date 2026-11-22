@@ -20,11 +20,12 @@
     </div>
     <div class="title-btns">
       <button class="btn gold big" data-act="toDeck">対戦する</button>
+      <button class="btn big" data-act="zukan">カード図鑑</button>
       <button class="btn big" data-act="howto">あそびかた</button>
       <button class="btn big" data-act="settings">設定</button>
     </div>
     <div class="title-rank" id="titleRank"></div>
-    <div class="title-foot">テスト版 v0.3　K.nom</div>
+    <div class="title-foot">テスト版 v0.4　K.nom</div>
   </section>
 
   <!-- デッキえらび -->
@@ -34,7 +35,16 @@
     <div class="deck-list" id="deckList"></div>
     <div class="deck-foot">
       <button class="btn" data-act="toTitle">もどる</button>
+      <button class="btn" data-act="zukan">カード図鑑</button>
     </div>
+  </section>
+
+  <!-- カード図鑑 -->
+  <section id="zukan" class="screen">
+    <div class="title-bg dim"></div>
+    <div id="zkTop" class="panel"></div>
+    <div id="zkGrid"></div>
+    <div id="zkInfo" class="panel"></div>
   </section>
 
   <!-- 対戦 -->

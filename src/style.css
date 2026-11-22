@@ -423,3 +423,70 @@ button { font-family: inherit; font-weight: 900; color: inherit; border: 0; back
 .ghost.flying { z-index: 65; }
 .land.d3 #board { top: 62px; height: 428px; }
 .land.d3 #board { --rx: 20deg; }
+
+/* ---------- v0.4：19デッキ ---------- */
+.card .cost.up { background: linear-gradient(180deg, #ffb0b8, #d23a4f 55%, #6d1220); }
+.card .cost.down { background: linear-gradient(180deg, #b8ffb0, #2fae4a 55%, #136025); }
+#ctrl .orb.bonus { box-shadow: 0 0 24px rgba(120,255,160,.9), inset 0 -6px 12px rgba(0,0,0,.4); border-color: #b8ffb0; }
+.bc.prot::after { content: ''; position: absolute; inset: -3px; border-radius: 9px; border: 2px solid #9fe8ff; box-shadow: 0 0 10px rgba(159,232,255,.9); pointer-events: none; }
+.bc.muted .art { filter: grayscale(1) brightness(.7); }
+.bc.muted::before { content: '停止'; position: absolute; left: 50%; top: 18px; transform: translateX(-50%); z-index: 4; font-size: 10px; padding: 0 5px; border-radius: 7px; background: #4b4560; color: #fff; }
+
+/* デッキえらび（スクロール） */
+.deck-list { overflow-y: auto; overflow-x: hidden; touch-action: pan-y; display: grid !important; align-content: start; scrollbar-width: thin; scrollbar-color: #a8792a #15112a; }
+.land .deck-list { left: 24px !important; right: 24px !important; top: 90px !important; height: 530px; grid-template-columns: repeat(3, 1fr); gap: 14px; padding: 4px 8px 4px 4px; }
+.port .deck-list { left: 16px !important; right: 16px !important; top: 80px !important; height: 780px; grid-template-columns: 1fr; gap: 10px; padding: 4px; }
+.land .deck-foot { top: 640px; } .port .deck-foot { top: 880px; }
+.deck-foot { gap: 16px; }
+.dtile { position: relative; display: flex; align-items: center; gap: 14px; border-radius: 12px; cursor: pointer; padding: 10px 14px; background: linear-gradient(90deg, rgba(30,24,54,.95), rgba(16,13,30,.92)); border: 1px solid rgba(232,195,106,.55); box-shadow: 0 6px 16px rgba(0,0,0,.5); transition: transform .15s, box-shadow .15s; }
+.dtile:hover { transform: translateY(-3px); box-shadow: 0 0 0 2px var(--gold3), 0 0 24px rgba(232,195,106,.5); }
+.dtile::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 4px; border-radius: 2px; background: var(--dc, #e8c36a); }
+.dtile .df { flex: none; border-radius: 50%; background-size: cover; background-position: center 15%; border: 2px solid var(--dc, #e8c36a); box-shadow: 0 0 12px rgba(0,0,0,.6); }
+.land .dtile { height: 120px; } .land .dtile .df { width: 92px; height: 92px; }
+.port .dtile { height: 100px; } .port .dtile .df { width: 76px; height: 76px; }
+.dtile .dt { min-width: 0; flex: 1; }
+.dtile .dn { font-size: 21px; font-weight: 900; white-space: nowrap; overflow: hidden; }
+.dtile .de { font-size: 14px; color: var(--gold); margin: 2px 0; white-space: nowrap; overflow: hidden; }
+.dtile .dd { font-size: 13px; color: var(--ink2); white-space: nowrap; overflow: hidden; }
+
+/* カード図鑑 */
+#zkTop, #zkGrid, #zkInfo { position: absolute; }
+#zkTop { display: flex; align-items: center; gap: 12px; padding: 0 12px; }
+#zkTop .btn { flex: none; height: 48px; font-size: 16px; padding: 0; }
+#zkTop .zf { flex: none; border-radius: 50%; background-size: cover; background-position: center 15%; border: 2px solid var(--gold); }
+#zkTop .zt { flex: 1; min-width: 0; }
+#zkTop .zn { font-size: 22px; font-weight: 900; white-space: nowrap; overflow: hidden; }
+#zkTop .ze { font-size: 13px; color: var(--gold); white-space: nowrap; overflow: hidden; }
+#zkGrid { display: grid; }
+#zkGrid .hc { cursor: pointer; }
+#zkInfo { overflow: hidden; }
+.land #zkTop { left: 16px; top: 12px; width: 1248px; height: 68px; } .land #zkTop .btn { width: 150px; } .land #zkTop .zf { width: 52px; height: 52px; }
+.land #zkGrid { left: 16px; top: 98px; width: 528px; grid-template-columns: repeat(4, 118px); grid-auto-rows: 146px; gap: 14px 18px; }
+.land #zkInfo { left: 566px; top: 92px; width: 698px; height: 612px; }
+.port #zkTop { left: 8px; top: 8px; width: 464px; height: 56px; gap: 6px; padding: 0 6px; } .port #zkTop .btn { width: 64px; height: 42px; font-size: 13px; } .port #zkTop .zf { width: 40px; height: 40px; } .port #zkTop .zn { font-size: 16px; } .port #zkTop .ze { font-size: 11px; }
+.port #zkGrid { left: 8px; top: 76px; width: 464px; grid-template-columns: repeat(4, 110px); grid-auto-rows: 122px; gap: 8px 8px; }
+.port #zkInfo { left: 8px; top: 470px; width: 464px; height: 482px; }
+.zi-art { position: absolute; border-radius: 8px; background-size: cover; background-position: center; box-shadow: inset 0 0 0 2px #d4a94e, 0 4px 12px rgba(0,0,0,.6); }
+.zi-art.face { background-position: center 18%; }
+.zi-name { position: absolute; font-weight: 900; color: var(--gold3); white-space: nowrap; overflow: hidden; }
+.zi-meta { position: absolute; display: flex; flex-wrap: wrap; gap: 6px; }
+.zi-meta .m { display: inline-flex; align-items: center; justify-content: center; height: 26px; min-width: 26px; padding: 0 9px; border-radius: 13px; font-size: 14px; white-space: nowrap; }
+.zi-text { position: absolute; overflow: hidden; line-height: 1.55; }
+.zi-text .kwl { display: inline-block; padding: 0 8px; border-radius: 9px; font-size: .8em; margin-right: 6px; color: #fff; }
+.zi-memo { position: absolute; overflow: hidden; line-height: 1.6; color: #e8dfc8; border-top: 1px solid rgba(232,195,106,.3); padding-top: 8px; }
+.zi-memo::before { content: '歴史メモ'; display: block; font-size: 12px; color: var(--gold); letter-spacing: .1em; margin-bottom: 2px; }
+.zi-share { position: absolute; overflow: hidden; font-size: 13px; color: var(--ink2); }
+.land .zi-art { left: 24px; top: 24px; width: 320px; height: 236px; }
+.land .zi-name { left: 364px; right: 24px; top: 30px; font-size: 30px; height: 42px; line-height: 42px; }
+.land .zi-meta { left: 364px; right: 24px; top: 84px; }
+.land .zi-text { left: 364px; right: 24px; top: 128px; height: 132px; font-size: 18px; }
+.land .zi-memo { left: 24px; right: 24px; top: 280px; height: 250px; font-size: 18px; }
+.land .zi-share { left: 24px; right: 24px; top: 548px; height: 44px; }
+.port .zi-art { left: 12px; top: 12px; width: 200px; height: 148px; }
+.port .zi-name { left: 224px; right: 12px; top: 12px; font-size: 20px; height: 30px; line-height: 30px; }
+.port .zi-meta { left: 224px; right: 12px; top: 48px; gap: 4px; } .port .zi-meta .m { height: 22px; font-size: 12px; padding: 0 6px; }
+.port .zi-text { left: 224px; right: 12px; top: 80px; height: 80px; font-size: 13.5px; }
+.port .zi-memo { left: 12px; right: 12px; top: 172px; height: 250px; font-size: 15px; }
+.port .zi-share { left: 12px; right: 12px; top: 432px; height: 40px; font-size: 12px; }
+.zkhc.on { box-shadow: 0 0 0 3px var(--gold3), 0 0 22px rgba(255,214,120,.8); transform: translateY(-4px); }
+.land .title-btns .btn { width: 220px; }

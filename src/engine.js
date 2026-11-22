@@ -428,7 +428,7 @@
     function declare(p) { if (!canDeclare(p)) return false; S.declaredBy = p; S.stakes = 4; return true; }
     function retreat(p) { if (!canRetreat(p)) return false; finish(p); return true; }
 
-    return { S, def, loc, power, total, snap, leads, cap, costOf, locBonus, startTurn, endTurn, canPlay, play, unplay, energy, energyLeft, declare, retreat, canDeclare, canRetreat, rand: R, TURNS };
+    return { S, def, loc, power, total, snap, leads, cap, costOf, locBonus, isProtected, silenced, startTurn, endTurn, canPlay, play, unplay, energy, energyLeft, declare, retreat, canDeclare, canRetreat, rand: R, TURNS };
   }
 
   // ---------- CPU ----------

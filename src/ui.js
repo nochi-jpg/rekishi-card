@@ -5,7 +5,8 @@
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const stage = $('#stage');
-  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+  let SPEED = 1; // 自動テストでは小さくして早送りする
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms * SPEED));
   const KW = { reveal: '公開時', ongoing: '永続', prophecy: '予言', combo: '史実コンボ', none: '効果なし' };
 
   // ---------- 保存 ----------
@@ -56,7 +57,7 @@
     scale = Math.min(w / W, h / H);
     stage.style.width = W + 'px'; stage.style.height = H + 'px';
     stage.style.transform = `translate(${(w - W * scale) / 2}px, ${(h - H * scale) / 2}px) scale(${scale})`;
-    if (nl !== layout) { layout = nl; stage.classList.remove('land', 'port'); stage.classList.add(layout); if (G) renderAll(); fitAll(); if ($('#modal').classList.contains('on') && modalRedraw) modalRedraw(); }
+    if (nl !== layout) { layout = nl; stage.classList.remove('land', 'port'); stage.classList.add(layout); if (G) renderAll(); fitAll(); if ($('#modal').classList.contains('on') && modalRedraw) modalRedraw(); if ($('#zukan').classList.contains('on')) renderZukan(); if ($('#deck').classList.contains('on')) renderDeckList(); }
   }
   function rectS(el) {
     const r = el.getBoundingClientRect(), s = stage.getBoundingClientRect();
@@ -118,9 +119,9 @@
   const pw = (uid) => V.snap.powers[uid];
 
   function newGame(deckId) {
-    myDeck = deckId; cpuDeck = deckId === 'himiko' ? 'taishi' : 'himiko';
+    myDeck = deckId; const others = Object.keys(DECKS).filter(k => k !== deckId); cpuDeck = others[Math.floor(Math.random() * others.length)];
     G = E.create({ seed: (Math.random() * 1e9) | 0, decks: [myDeck, cpuDeck] });
-    V = { resolving: false, rev: new Set(), snap: G.snap(), hide: new Set(), oppShown: false, locShown: [false, false, false] };
+    V = { resolving: false, rev: new Set(), snap: G.snap(), hide: new Set(), oppShown: false, locShown: [false, false, false], disp: null };
     log = { combos: [] }; sel = null; busy = true;
     show('game'); renderAll(); camera(-1, 1, 1, 10);
     setTimeout(nextTurn, 500);
@@ -135,11 +136,17 @@
     el.className = 'card ' + (mode === 'hand' ? 'hc' : 'bc') + (d.leader ? ' leader' : '');
     const p = pw(uid), base = d.power;
     const pc = p > base ? ' up' : p < base ? ' down' : '';
+    const cv = V.snap.costs ? V.snap.costs[uid] : d.cost;
+    const cc = cv > d.cost ? ' up' : cv < d.cost ? ' down' : '';
     if (mode === 'hand') {
-      el.innerHTML = handInner(d, p, pc);
+      el.innerHTML = handInner(d, p, pc, cv, cc);
     } else {
       el.innerHTML = `<div class="art${isFace(d) ? ' face' : ''}" style="background-image:url('${imgUrl(d)}')"></div><div class="frame"></div>
         <div class="cost">${d.cost}</div><div class="pow${pc}">${p}</div><div class="bnm">${d.name}</div>`;
+      if (!V.resolving && c.loc >= 0 && revealed(uid)) {
+        if (G.isProtected(uid)) el.classList.add('prot');
+        if (d.kind === 'ongoing' && G.silenced(uid)) el.classList.add('muted');
+      }
       if (c.proph && revealed(uid)) {
         const st = V.resolving && V.prophPending && V.prophPending.has(uid) ? 'wait' : c.proph.state;
         if (st !== 'none') el.insertAdjacentHTML('beforeend', `<div class="pmark ${st}">${st === 'hit' ? '的中' : st === 'miss' ? 'はずれ' : '予言'}</div>`);
@@ -149,9 +156,9 @@
     return el;
   }
 
-  function handInner(d, p, pc) {
+  function handInner(d, p, pc, cv, cc) {
     return `<div class="art${isFace(d) ? ' face' : ''}" style="background-image:url('${imgUrl(d)}')"></div><div class="frame"></div>
-        <div class="cost">${d.cost}</div><div class="pow${pc || ''}">${p}</div><div class="lb lb-c">コスト</div><div class="lb lb-p">パワー</div>
+        <div class="cost${cc || ''}">${cv === undefined ? d.cost : cv}</div><div class="pow${pc || ''}">${p}</div><div class="lb lb-c">コスト</div><div class="lb lb-p">パワー</div>
         <div class="nm fit">${d.name}</div><div class="kw kw-${d.kind}">${KW[d.kind]}</div>`;
   }
   function renderTop() {
@@ -171,13 +178,12 @@
       const L = G.loc(li), shown = V.locShown[li];
       const col = document.createElement('div'); col.className = 'loc'; col.dataset.li = li;
       if (shown) { const t = V.snap.totals[li]; if (t[0] > t[1]) col.classList.add('lead-me'); else if (t[1] > t[0]) col.classList.add('lead-op'); }
-      const cap = shown ? G.cap(li) : 4;
       const mk = (p) => {
+        const cap = shown ? G.cap(li, p) : 4;
         const side = document.createElement('div'); side.className = 'side ' + (p === ME ? 'me' : 'opp');
         const slots = document.createElement('div'); slots.className = 'slots';
-        let list = G.S.board[li][p];
+        let list = V.disp ? V.disp[li][p] : G.S.board[li][p];
         if (p === OP && !V.oppShown) list = list.filter(u => !G.S.pending[OP].includes(u));
-        if (V.goneShow && V.goneShow.size) { list = list.slice(); V.goneShow.forEach((gl, gu) => { if (gl === li && G.S.cards[gu].owner === p) list.push(gu); }); }
         for (let i = 0; i < 4; i++) {
           const sl = document.createElement('div'); sl.className = 'slot' + (i >= cap ? ' closed' : '');
           slots.appendChild(sl);
@@ -186,7 +192,7 @@
           const sl = slots.children[i]; if (!sl) return;
           let el;
           if (p === OP && !revealed(uid)) el = cardEl(uid, 'back');
-          else { el = cardEl(uid, 'board'); if (p === ME && !revealed(uid)) { el.classList.add('pend'); el.dataset.drag = '1'; } }
+          else { el = cardEl(uid, 'board'); if (p === ME && !revealed(uid) && !V.resolving) { el.classList.add('pend'); el.dataset.drag = '1'; } else if (p === ME && !revealed(uid)) el.classList.add('pend'); }
           el.style.position = 'absolute'; el.style.inset = '0'; el.style.width = '100%'; el.style.height = '100%';
           sl.appendChild(el);
         });
@@ -215,7 +221,7 @@
     const left = G.energyLeft(ME);
     hand.forEach(uid => {
       const el = cardEl(uid, 'hand'); el.dataset.drag = '1';
-      if (CARDS[G.S.cards[uid].id].cost > left || busy) el.classList.add('poor');
+      if (G.costOf(uid) > left || busy) el.classList.add('poor');
       if (sel === uid) el.classList.add('sel');
       if (newOnes && newOnes.includes(uid)) el.classList.add('newdraw');
       if (layout === 'land' && use3d) { const k = hand.indexOf(uid) - (hand.length - 1) / 2; el.style.setProperty('--fr', (k * 1.5) + 'deg'); el.style.setProperty('--fy', (k * k * 1.6) + 'px'); }
@@ -227,8 +233,9 @@
 
   function renderCtrl() {
     const left = G.S.turn ? G.energyLeft(ME) : 0;
-    const anyPlayable = !busy && G.S.players[ME].hand.some(u => CARDS[G.S.cards[u].id].cost <= left && [0, 1, 2].some(li => G.canPlay(ME, u, li)));
-    $('#ctrl').innerHTML = `<div class="orb${left <= 0 ? ' zero' : ''}"><b>${left}</b><small>エネルギー</small></div>
+    const anyPlayable = !busy && G.S.players[ME].hand.some(u => [0, 1, 2].some(li => G.canPlay(ME, u, li)));
+    const bonus = G.S.turn ? G.S.players[ME].energyBonus : 0;
+    $('#ctrl').innerHTML = `<div class="orb${left <= 0 ? ' zero' : ''}${bonus ? ' bonus' : ''}"><b>${left}</b><small>${bonus ? 'エネルギー+' + bonus : 'エネルギー'}</small></div>
       <button class="btn gold b-end${!busy && !anyPlayable ? ' pulse' : ''}" data-act="end" ${busy ? 'disabled' : ''}>ターン終了</button>
       <button class="btn blue b-decl" data-act="declare" ${busy || !G.canDeclare(ME) ? 'disabled' : ''}>${G.S.declaredBy === ME ? '宣言中<span>★±4</span>' : `天下取り<span>${layout === 'land' ? '★±4・3ターンまで' : '★±4'}</span>`}</button>
       <button class="btn red b-ret" data-act="retreat" ${busy || !G.canRetreat(ME) ? 'disabled' : ''}>撤退<span>${G.S.declaredBy === ME ? (layout === 'land' ? '宣言中はできない' : 'できない') : (layout === 'land' ? '★-1・3ターンまで' : '★-1')}</span></button>`;
@@ -256,10 +263,10 @@
     const own = c.owner === ME;
     if (!own && !revealed(sel)) { D.innerHTML = `<div class="dt-hint"><b>伏せられたカード</b><p>ターン終了で公開されます</p></div>`; return; }
     const pend = own && G.S.pending[ME].includes(sel) && !busy;
-    const p = pw(sel);
+    const p = pw(sel), cv = G.costOf(sel);
     D.innerHTML = `<div class="dt-art${isFace(d) ? ' face' : ''}" style="background-image:url('${imgUrl(d)}')"></div>
       <div class="dt-name fit">${d.name}</div>
-      <div class="dt-meta"><span class="m c">${d.cost}</span><span class="m p">${p}</span>${d.tags.map(t => `<span class="m tag">${t}</span>`).join('')}</div>
+      <div class="dt-meta"><span class="m c">${cv}</span><span class="m p">${p}</span>${d.tags.map(t => `<span class="m tag">${t}</span>`).join('')}</div>
       <div class="dt-text fitb"><span class="kwl kw-${d.kind}">${KW[d.kind]}</span>${d.kind === 'none' ? '' : d.text}</div>
       <div class="dt-memo fitb">${d.memo}</div>
       ${pend ? `<div class="dt-btn"><button class="btn" data-act="unplay">手札にもどす</button></div>` : ''}`;
@@ -383,6 +390,12 @@
       }
     }
     await cameraReset(350);
+    for (const e of ev) {
+      if (e.p !== ME) continue;
+      const orb = $('#ctrl .orb'), c = orb ? centerOf(orb) : { x: 640, y: 600 };
+      if (e.t === 'ramp') { renderCtrl(); floatText(c.x, c.y - 50, 'エネルギー+' + e.amount, 'plus'); SE.play('good', 0.8); await sleep(700); }
+      if (e.t === 'costUp') { floatText(c.x, c.y - 50, '手札のコスト+' + e.amount, 'minus'); SE.play('ng', 0.8); await sleep(700); }
+    }
     draws.filter(e => e.p === OP).forEach(e => V.hide.delete(e.uid));
     const mine = draws.filter(e => e.p === ME).map(e => e.uid);
     mine.forEach(u => V.hide.delete(u));
@@ -410,8 +423,8 @@
     const handBefore = new Set(G.S.players[ME].hand.concat(G.S.players[OP].hand));
     const prophWait = new Set(Object.keys(G.S.cards).filter(u => G.S.cards[u].proph && G.S.cards[u].proph.state === 'wait'));
     const comboBefore = new Set(Object.keys(G.S.cards).filter(u => G.S.cards[u].comboShown));
+    V.disp = G.S.board.map(l => l.map(x => x.slice()));
     const ev = G.endTurn();
-    V.goneShow = new Map(ev.filter(e => e.t === 'destroy').map(e => [e.target, e.li]));
     V.resolving = true; V.rev = prevRev; V.prophPending = prophWait; V.comboDone = comboBefore;
     G.S.players[ME].hand.forEach(u => { if (!handBefore.has(u)) V.hide.add(u); });
     G.S.players[OP].hand.forEach(u => { if (!handBefore.has(u)) V.hide.add(u); });
@@ -431,13 +444,14 @@
         const src = cardNode(e.uid);
         if (e.proph) { V.prophPending.add(e.uid); renderBoard(); }
         if (src) { const c = centerOf(src); if (!e.targets.length) floatText(c.x, c.y - 30, e.text, 'info'); }
+        if (e.cost) { if (src) { const c = centerOf(src); floatText(c.x, c.y - 30, e.text, 'info'); } $$('#hand .hc').forEach(h => h.classList.add('buff')); SE.play('good', 0.8); await sleep(700); continue; }
         if (e.targets.length) {
           SE.play(e.delta < 0 ? 'hit' : 'ok', 0.9);
           e.targets.forEach(t => {
             const el = cardNode(t); if (!el) return;
             const c = centerOf(el);
             el.classList.add(e.delta < 0 ? 'hit' : 'buff');
-            floatText(c.x, c.y - 10, (e.delta > 0 ? '+' : '') + e.delta, e.delta < 0 ? 'minus' : 'plus');
+            if (e.delta !== undefined) floatText(c.x, c.y - 10, (e.delta > 0 ? '+' : '') + e.delta, e.delta < 0 ? 'minus' : 'plus');
             if (e.delta > 0) sparks(c.x, c.y, 8);
           });
           if (src && !e.targets.includes(e.uid)) { const c = centerOf(src); floatText(c.x, c.y - 40, e.text, 'info'); }
@@ -445,13 +459,42 @@
         await sleep(e.targets.length ? 750 : 600);
       } else if (e.t === 'destroy') {
         const src = cardNode(e.uid), el = cardNode(e.target);
-        if (src) { const c = centerOf(src); floatText(c.x, c.y - 30, '退場させる', 'info'); }
+        if (src && src !== el) { const c = centerOf(src); floatText(c.x, c.y - 30, e.self ? '自分のカードを退場' : '退場させる', 'info'); }
         await sleep(350);
         if (el) { const c = centerOf(el); el.classList.add('shatter'); sparks(c.x, c.y, 18); ring(c.x, c.y, 'red'); floatText(c.x, c.y, '退場', 'minus'); }
         SE.play('hit'); SE.whoosh();
         await sleep(600);
-        V.goneShow.delete(e.target); V.snap = e.snap; renderBoardCounting();
+        V.disp.forEach(l => l.forEach((x, i) => l[i] = x.filter(u => u !== e.target)));
+        V.snap = e.snap; renderBoardCounting();
         await sleep(250);
+      } else if (e.t === 'steal' || e.t === 'move') {
+        const src = cardNode(e.uid), tu = e.target || e.uid, owner = G.S.cards[tu].owner;
+        if (src) { const c = centerOf(src); floatText(c.x, c.y - 30, e.t === 'steal' ? 'うばう' : (e.target ? '移動させる' : 'かけつける'), 'info'); }
+        await sleep(300);
+        const old = grabRects();
+        V.disp.forEach(l => l.forEach((x, i) => l[i] = x.filter(u => u !== tu)));
+        V.disp[e.t === 'steal' ? e.li : e.to][owner].push(tu);
+        V.snap = e.snap; renderBoardCounting(); flipFrom(old, 520, '#board [data-uid]');
+        SE.whoosh(); SE.play(e.t === 'steal' ? 'shock' : 'tap', 0.8);
+        await sleep(560);
+        const el = cardNode(tu); if (el) { const c = centerOf(el); ring(c.x, c.y, owner === ME ? 'blue' : 'red'); }
+        await sleep(250);
+      } else if (e.t === 'spawn') {
+        e.targets.forEach(t => { V.rev.add(t); V.disp[G.S.cards[t].loc][e.p].push(t); });
+        V.snap = e.snap; renderBoardCounting();
+        e.targets.forEach(t => { const el = cardNode(t); if (el) { el.classList.add('slam'); const c = centerOf(el); ring(c.x, c.y, e.p === ME ? 'blue' : 'red'); sparks(c.x, c.y, 8); } });
+        SE.play('decide', 0.8); await sleep(650);
+      } else if (e.t === 'draw') {
+        V.hide.delete(e.uid); renderTop(); if (e.p === ME) renderHand([e.uid]);
+        const src = cardNode(e.reason); if (src) { const c = centerOf(src); floatText(c.x, c.y - 30, '1枚引いた', 'info'); }
+        SE.play('tap', 0.8); await sleep(450);
+      } else if (e.t === 'discard') {
+        const src = cardNode(e.uid); if (src) { const c = centerOf(src); floatText(c.x, c.y - 30, e.targets.map(u => CARDS[G.S.cards[u].id].name).join('・') + 'を捨てた', 'info'); }
+        V.snap = e.snap; renderHand(); SE.play('ng', 0.8); await sleep(800);
+      } else if (e.t === 'rampSet' || e.t === 'canceled') {
+        const src = cardNode(e.uid);
+        if (src) { const c = centerOf(src); floatText(c.x, c.y - 30, e.t === 'rampSet' ? '次のターン エネルギー+' + e.amount : '効果が止められた', e.t === 'rampSet' ? 'info' : 'minus'); if (e.t === 'canceled') src.classList.add('hit'); }
+        SE.play(e.t === 'rampSet' ? 'good' : 'ng', 0.7); await sleep(650);
       } else if (e.t === 'fetch') {
         V.hide.delete(e.uid); renderTop(); renderHand(e.p === ME ? [e.uid] : null);
         const src = cardNode(e.from);
@@ -476,7 +519,7 @@
       }
     }
     V.camLi = -1; await cameraReset(350);
-    V.resolving = false; V.oppShown = false; V.hide.clear(); V.goneShow = new Map();
+    V.resolving = false; V.oppShown = false; V.hide.clear(); V.disp = null;
     V.snap = G.snap(); renderAll();
     if (G.S.over) { camera(-1, 0.96, 0.45, 900); await sleep(700); return showResult(); }
     await sleep(250);
@@ -616,6 +659,10 @@
   function action(act, el) {
     switch (act) {
       case 'toDeck': SE.play('decide'); renderDeckList(); show('deck'); break;
+      case 'zukan': SE.play('decide'); openZukan($('#deck').classList.contains('on') ? 'deck' : 'title'); break;
+      case 'zkBack': SE.play('tap'); if (zk.from === 'deck') { renderDeckList(); show('deck'); } else show('title'); break;
+      case 'zkPrev': case 'zkNext': { SE.play('tap'); const n = Object.keys(DECKS).length; zk.deck = (zk.deck + (act === 'zkNext' ? 1 : n - 1)) % n; zk.card = 0; renderZukan(); break; }
+      case 'zkCard': SE.play('tap', 0.6); zk.card = +el.dataset.i; renderZukan(); break;
       case 'toTitle': SE.play('tap'); closeModal(); G = null; show('title'); break;
       case 'pickDeck': SE.play('decide'); newGame(el.dataset.deck); break;
       case 'howto': SE.play('tap'); openHowto(0); break;
@@ -635,14 +682,35 @@
 
   function renderDeckList() {
     $('#deckList').innerHTML = Object.values(DECKS).map(d => `
-      <div class="deckcard" data-act="pickDeck" data-deck="${d.id}">
-        <div class="dimg" style="background-image:url('img/face/${d.face}.webp')"></div><div class="dshade"></div>
-        <div class="dera">${d.era}時代</div>
-        <div class="dname">${d.name}</div><div class="dtheme">テーマ「${d.theme}」</div><div class="ddesc">${d.desc}</div>
+      <div class="dtile" data-act="pickDeck" data-deck="${d.id}" style="--dc:${d.color}">
+        <div class="df" style="background-image:url('img/face/${d.face}.webp')"></div>
+        <div class="dt"><div class="dn fit">${d.name}</div><div class="de fit">${d.era}時代・テーマ「${d.theme}」</div><div class="dd fit">${d.desc}</div></div>
       </div>`).join('');
+    $('#deckList').scrollTop = 0;
   }
 
-  // ---------- モーダル ----------
+  // ---------- カード図鑑 ----------
+  let zk = { deck: 0, card: 0, from: 'title' };
+  function renderZukan() {
+    const ids = Object.keys(DECKS), d = DECKS[ids[zk.deck]];
+    $('#zkTop').innerHTML = `<button class="btn" data-act="zkBack">もどる</button>
+      <div class="zf" style="background-image:url('img/face/${d.face}.webp')"></div>
+      <div class="zt"><div class="zn fit">${d.name}</div><div class="ze fit">${d.era}時代・「${d.theme}」${layout === 'land' ? '　' + d.desc : ''}　${zk.deck + 1} / ${ids.length}</div></div>
+      <button class="btn" data-act="zkPrev">${layout === 'land' ? '前の人物' : '前へ'}</button><button class="btn" data-act="zkNext">${layout === 'land' ? '次の人物' : '次へ'}</button>`;
+    $('#zkGrid').innerHTML = d.cards.map((cid, i) => { const c = CARDS[cid]; return `<div class="card hc zkhc${i === zk.card ? ' on' : ''}${c.leader || isFace(c) ? ' leader' : ''}" data-act="zkCard" data-i="${i}">${handInner(c, c.power)}</div>`; }).join('');
+    const c = CARDS[d.cards[zk.card]];
+    const decksWith = Object.values(DECKS).filter(x => x.cards.includes(c.id)).map(x => x.name);
+    $('#zkInfo').innerHTML = `<div class="zi-art${isFace(c) ? ' face' : ''}" style="background-image:url('${imgUrl(c)}')"></div>
+      <div class="zi-name fit">${c.name}</div>
+      <div class="zi-meta"><span class="m c">コスト ${c.cost}</span><span class="m p">パワー ${c.power}</span>${c.tags.map(t => `<span class="m tag">${t}</span>`).join('')}</div>
+      <div class="zi-text fitb"><span class="kwl kw-${c.kind}">${KW[c.kind]}</span>${c.kind === 'none' ? '' : c.text}</div>
+      <div class="zi-memo fitb">${c.memo}</div>
+      <div class="zi-share fitb">${decksWith.length > 1 ? '共通カード：' + decksWith.join('・') + 'のデッキに入っている' : ''}</div>`;
+    fitAll($('#zukan'));
+  }
+  function openZukan(from) { zk.from = from; zk.card = 0; show('zukan'); renderZukan(); }
+
+  // ---------- モーダル ----------  // ---------- モーダル ----------
   function openModal(html, redraw) { const M = $('#modal'); M.innerHTML = `<div class="shade"></div><div class="box panel">${html}</div>`; M.classList.add('on'); modalRedraw = redraw || null; fitAll(M); }
   function closeModal() { const M = $('#modal'); M.classList.remove('on'); M.innerHTML = ''; modalRedraw = null; }
   function openConfirm(title, body, okLabel, onOk, color) {
@@ -741,5 +809,5 @@
   stage.classList.add(layout); fitStage(); applyLabels();
   show('title');
   // テスト用（自動確認ツールから使う）
-  window.RC_UI = { get G() { return G; }, newGame, endTurn, doPlay, action, get busy() { return busy; } };
+  window.RC_UI = { get G() { return G; }, newGame, endTurn, doPlay, action, get busy() { return busy; }, fast(v) { SPEED = v ? 0.03 : 1; } };
 })();

@@ -511,10 +511,10 @@
     const per = U.layout === 'land' ? 6 : 4, pages = Math.max(1, Math.ceil(list.length / per));
     page = Math.min(page, pages - 1);
     const cur = SV.bg && isOwned(SV.bg) ? SV.bg : 'title';
-    const items = list.slice(page * per, page * per + per).map(id => `<button class="bgp${id === cur ? ' on' : ''}" data-bg="${id}"><div class="bp-img" style="background-image:url('${id === 'title' ? IMG('img/ui/title_bg.webp') : IMG(`img/menubg/${id}.webp`)}')"></div><div class="bp-nm">${id === 'title' ? 'タイトル' : DECKS[id].name}</div></button>`).join('');
+    const items = list.slice(page * per, page * per + per).map(id => `<button class="bgp${id === cur ? ' on' : ''}" data-bg="${id}"><div class="bp-img" style="background-image:url('${id === 'title' ? IMG(`img/ui/title_bg.webp`) : IMG(`img/menubg/${id}.webp`)}')"></div><div class="bp-nm">${id === 'title' ? 'タイトル' : DECKS[id].name}</div></button>`).join('');
     U.openModal(`<div class="mtitle">メニューの背景</div>
       <div class="mbody bgpick">${items}</div>
-      <div class="mbtns"><button class="btn" id="bpPrev" ${page ? '' : 'disabled'}>まえへ</button><span class="pgno">${page + 1} / ${pages}</span><button class="btn" id="bpNext" ${page < pages - 1 ? '' : 'disabled'}>つぎへ</button><button class="btn gold" id="bpBack">もどる</button></div>`, () => openBgPicker(page));
+      <div class="mbtns"><button class="btn" id="bpPrev" ${page ? '' : 'disabled'}>まえへ</button><span class="pgno">${page + 1} / ${pages}</span><button class="btn" id="bpNext" ${page < pages - 1 ? '' : 'disabled'}>つぎへ</button><button class="btn gold" id="bpBack">もどる</button></div>`, () => openBgPicker(page), 'big');
     document.querySelectorAll('.bgp').forEach(b => b.onclick = (e) => { e.stopPropagation(); U.SE.play('decide'); SV.bg = b.dataset.bg === 'title' ? '' : b.dataset.bg; save(); applyBg(); openBgPicker(page); });
     $('#bpPrev').onclick = () => { U.SE.play('tap'); openBgPicker(page - 1); };
     $('#bpNext').onclick = () => { U.SE.play('tap'); openBgPicker(page + 1); };

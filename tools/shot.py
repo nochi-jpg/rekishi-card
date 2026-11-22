@@ -16,7 +16,10 @@ CHECK = r'''() => {
     const hasText = Array.from(el.childNodes).some(n => n.nodeType === 3 && n.textContent.trim());
     if (!hasText) return;
     const cs = getComputedStyle(el);
-    if ((cs.overflow === 'hidden' || cs.overflowX === 'hidden') && (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 2))
+    // 文字そのものの大きさで判定（ボタンの光の演出などは無視）
+    const rg = document.createRange(); rg.selectNodeContents(el); const tr = rg.getBoundingClientRect(), er = el.getBoundingClientRect();
+    const over = el.classList.contains('btn') ? (tr.width > er.width + 1 || tr.height > er.height + 2) : (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 2);
+    if ((cs.overflow === 'hidden' || cs.overflowX === 'hidden') && over)
       bad.push('はみ出し: ' + el.className + ' 「' + el.textContent.trim().slice(0, 20) + '」 ' + el.scrollWidth + '/' + el.clientWidth + ' ' + el.scrollHeight + '/' + el.clientHeight);
   });
   // 枠に入りきらず見切れている文字・ボタン（overflow:hidden の箱の中）
@@ -29,7 +32,7 @@ CHECK = r'''() => {
   document.querySelectorAll('.screen.on .btn span, #modal.on .btn').forEach(el => {
     if (!vis(el)) return; const lh = parseFloat(getComputedStyle(el).lineHeight) || parseFloat(getComputedStyle(el).fontSize) * 1.3;
     if (el.tagName === 'SPAN' && el.getBoundingClientRect().height > lh * 1.6) bad.push('折り返し: ' + el.textContent);
-    if (el.scrollWidth > el.clientWidth + 1) bad.push('ボタンからはみ出し: ' + el.textContent.trim());
+    { const rg = document.createRange(); rg.selectNodeContents(el); if (rg.getBoundingClientRect().width > el.getBoundingClientRect().width + 1) bad.push('ボタンからはみ出し: ' + el.textContent.trim()); }
     if (el.tagName !== 'SPAN' && !el.querySelector('span,small,b,i,div,img')) { const r = document.createRange(); r.selectNodeContents(el); if (r.getClientRects().length > 1 && r.getBoundingClientRect().height > lh * 1.6) bad.push('折り返し: ' + el.textContent.trim()); }
   });
   // ボタン・カードが画面外に出ていないか
@@ -76,6 +79,17 @@ async def main():
             await pg.evaluate("RC_UI.action('closeModal')")
             await pg.evaluate("RC_UI.action('howto')"); await pg.wait_for_timeout(500)
             await pg.screenshot(path=f'{OUT}/{name}_1howto0.png'); allbad[name+'_howto0'] = await pg.evaluate(CHECK)
+            for hi in range(1, 11):
+                await pg.click('#hNext'); await pg.wait_for_timeout(250)
+                await pg.screenshot(path=f'{OUT}/{name}_1howto{hi:02d}.png'); allbad[name+f'_howto{hi}'] = await pg.evaluate(CHECK)
+            # 新しい画面
+            for nm, js in [('daily', "RC_UI.x.closeModal(); RC_UI.action('daily')"), ('modes', "RC_UI.x.closeModal(); RC_UI.action('toDeck')"), ('settings', "RC_UI.x.closeModal(); RC_UI.action('settings')"),
+                           ('name', "RC_UI.x.closeModal(); RC_META.openNameInput(()=>{})"), ('bgpick', "RC_UI.x.closeModal(); RC_META.openBgPicker()"), ('debug', "RC_UI.x.closeModal(); RC_META.openDebug()"),
+                           ('transfer', "RC_UI.x.closeModal(); RC_FRIEND.openTransfer()"), ('puzzle', "RC_UI.x.closeModal(); RC_PUZZLE.open()"), ('camp', "RC_UI.x.closeModal(); RC_CAMP.open()"),
+                           ('campch', "RC_CAMP.openChapter(0)"), ('friend', "RC_UI.x.closeModal(); RC_FRIEND.open()"), ('deck', "RC_UI.x.closeModal(); RC_UI.action('modeCpu')")]:
+                await pg.evaluate(js); await pg.wait_for_timeout(450)
+                await pg.screenshot(path=f'{OUT}/{name}_7{nm}.png'); allbad[name+'_'+nm] = await pg.evaluate(CHECK)
+            await pg.evaluate("RC_UI.x.closeModal(); RC_META.toMenu()"); await pg.wait_for_timeout(300); await pg.evaluate("RC_UI.x.closeModal()")
             await pg.evaluate("RC_UI.action('closeModal')")
             await pg.evaluate("RC_UI.action('shop')"); await pg.wait_for_timeout(900)
             await pg.screenshot(path=f'{OUT}/{name}_1shop.png'); allbad[name+'_shop'] = await pg.evaluate(CHECK)
@@ -110,12 +124,16 @@ async def main():
                     await pg.screenshot(path=f'{OUT}/{name}_3game_t{t}.png'); allbad[name+f'_game{t}'] = await pg.evaluate(CHECK)
                 if t == 5:
                     await pg.screenshot(path=f'{OUT}/{name}_3game_t{t}.png'); allbad[name+f'_game{t}'] = await pg.evaluate(CHECK)
-                await pg.evaluate("RC_UI.endTurn()")
+                await pg.evaluate("void RC_UI.endTurn()")
                 await pg.wait_for_timeout(100)
                 if t == 4:
                     await pg.wait_for_timeout(1500); await pg.screenshot(path=f'{OUT}/{name}_4resolve.png')
             for _ in range(120):
                 if await pg.evaluate("document.querySelector('#modal').classList.contains('on')"): break
+                if await pg.evaluate("!!document.querySelector('.vscene')"):
+                    await pg.wait_for_timeout(1200); await pg.screenshot(path=f'{OUT}/{name}_5victory.png'); allbad[name+'_victory'] = await pg.evaluate(CHECK)
+                    await pg.click('.vscene'); await pg.wait_for_timeout(200)
+                    if await pg.evaluate("!!document.querySelector('.vscene')"): await pg.click('.vscene')
                 await pg.wait_for_timeout(250)
             await pg.wait_for_timeout(900)
             await pg.screenshot(path=f'{OUT}/{name}_5result.png'); allbad[name+'_result'] = await pg.evaluate(CHECK)

@@ -9,7 +9,7 @@ def b64(path):
     return base64.b64encode(open(path, 'rb').read()).decode()
 
 css = open('src/style.css', encoding='utf-8').read()
-js = ''.join(';' + open(p, encoding='utf-8').read() + '\n;\n' for p in ['lib/se.js', 'src/data.js', 'src/engine.js', 'src/ui.js', 'src/meta.js', 'src/tutorial.js', 'src/lines.js', 'src/camp.js', 'src/puzzles.js', 'src/puzzle.js', 'lib/ggwave.js', 'lib/jsQR.min.js', 'lib/qrcode.min.js', 'src/friend.js'])
+js = ''.join(';' + open(p, encoding='utf-8').read() + '\n;\n' for p in ['lib/se.js', 'src/data.js', 'src/engine.js', 'src/ui.js', 'src/meta.js', 'src/tutorial.js', 'src/lines.js', 'src/howto.js', 'src/camp.js', 'src/puzzles.js', 'src/puzzle.js', 'lib/ggwave.js', 'lib/jsQR.min.js', 'lib/qrcode.min.js', 'src/friend.js'])
 html = open('index.html', encoding='utf-8').read()
 
 # フォントを使う文字だけにしぼる
@@ -28,7 +28,7 @@ css = css.replace("url('../fonts/ZenKakuGothicNew-Black.ttf')", f"url(data:font/
 
 # 画像：CSSの url('../img/...') と JSの `img/...` を置きかえる
 imgs = {}
-for d in ['card', 'face', 'loc', 'ui', 'rank', 'tut', 'vic', 'menubg']:
+for d in ['card', 'face', 'loc', 'ui', 'rank', 'tut', 'vic', 'menubg', 'howto']:
     for f in os.listdir(f'img/{d}'):
         imgs[f'img/{d}/{f}'] = 'data:image/webp;base64,' + b64(f'img/{d}/{f}')
 css = re.sub(r"url\('\.\./(img/[^']+)'\)", lambda m: f"url('{imgs[m.group(1)]}')", css)
@@ -44,7 +44,8 @@ js = js.replace("url('img/face/${od.face}.webp')", "url('${RC_IMG[`img/face/${od
 js = js.replace("url('img/face/${d.face}.webp')", "url('${RC_IMG[`img/face/${d.face}.webp`]}')")
 js = js.replace("url('img/vic/${ln.sp}.webp')", "url('${RC_IMG[`img/vic/${ln.sp}.webp`]}')")
 js = js.replace("url('img/loc/${L.img}.webp')", "url('${RC_IMG[`img/loc/${L.img}.webp`]}')")
-assert "'img/" not in js.replace('"img/', ''), '置きかえ忘れの画像パスがある'
+_bad = [js[max(0,i-80):i+40] for i in [m.start() for m in re.finditer("'img/", js.replace('"img/', '"IMG/'))]]
+assert not _bad, '置きかえ忘れの画像パスがある: ' + repr(_bad[:3])
 
 html = html.replace('<link rel="stylesheet" href="src/style.css">', '<style>\n' + css + '\n</style>')
 html = re.sub(r'<script src="[^"]+"></script>\n?', '', html)

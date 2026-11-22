@@ -856,7 +856,7 @@
     const rows = [row('sSnd', '効果音', SE.on), row('sBgm', 'BGM', RC_META.BGM.on), row('sLbl', '「コスト」「パワー」の文字', showLabels), row('s3d', '3D表示（重いときはオフ）', use3d)];
     if (fsOK()) rows.push(act('sFull', '全画面表示', fsEl() ? 'もどす' : '全画面', fsEl() ? 'gold' : ''));
     if (G) rows.push(act('sQuit', 'タイトル画面にもどる（試合は放棄）', 'もどる', 'red'));
-    else rows.push(act('sBg', 'メニューの背景', 'えらぶ'), act('sName', '名前：' + RC_META.playerName(), 'かえる'), act('sTut', 'チュートリアル（本じいの教え）', '見る'));
+    else rows.push(act('sBg', 'メニューの背景', 'えらぶ'), act('sName', '名前：' + RC_META.playerName(), 'かえる'), act('sTut', 'チュートリアル', '見る'));
     openModal(`<div class="mtitle" id="sTitle">設定</div>
       <div class="mbody setbody${rows.length > 5 ? ' many' : ''}">${rows.join('')}</div>
       <div class="mbtns"><button class="btn gold" id="sBack">${fromMenu ? 'もどる' : 'とじる'}</button></div>`, () => openSettings(fromMenu), rows.length > 5 ? 'big' : '');
@@ -884,20 +884,32 @@
       <i class="num n1">1</i><i class="num n2">2</i><i class="num n3">3</i><i class="num n4">4</i></div>
       <div class="glist">${items.map(x => `<div class="gi"><i class="num">${x[0]}</i><div><b>${x[1]}</b><span>${x[2]}</span></div></div>`).join('')}</div></div>`;
   }
+  // あそびかた：画面のスクショに番号をつけて説明（スクショは tools/howtoshots.py で撮る）
+  const HIMG = (p) => (window.RC_IMG && window.RC_IMG[p]) || p;
   const HOWTO = [
     ['カードの見方', null],
-    ['勝ち方', '試合は<b>6ターン</b>で終わります。<br>場所は3つ。<b>2つの場所</b>でパワーの合計が相手より多ければ勝ち！<br>場所は1ターン目に左、2ターン目に中央、3ターン目に右が表になります。'],
-    ['カードを出す', '使えるエネルギーは<b>ターンの数</b>と同じ（3ターン目なら3）。<br>手札のカードを場所に<b>ドラッグ</b>するか、カードを選んでから場所を<b>クリック（タップ）</b>して置きます。<br>1つの場所に置けるのは<b>4枚まで</b>。置いたカードは、ターン終了まで手札にもどせます。'],
-    ['公開とカードの効果', '「ターン終了」で、相手といっしょにカードを公開。<b>リードしているほう</b>が先に公開します。<br><b>公開時</b>：表になったとき1回発動　<b>永続</b>：場にいるあいだずっと<br><b>予言</b>：そのターン、相手も同じ場所に出していたら発動。相手の置き場所を読もう<br><b>史実コンボ</b>：歴史でつながる2枚が同じ場所にそろうと強くなる'],
-    ['場所の効果', '場所にはそれぞれ効果があります。<br>カードの<b>タグ</b>（政治・外交・文化・宗教・戦い）が場所に合うとパワーアップ。<br>相手の時代の場所でも戦えるように、デッキを組み立てよう。'],
-    ['天下取り宣言と撤退', 'CPU戦では、勝つと<b>★+2</b>、負けると<b>★-1</b>。<br><b>天下取り宣言</b>（3ターン目まで・1試合1回）をすると、勝てば<b>★+4</b>・負けると<b>★-2</b>。宣言した人は撤退できません。<br><b>撤退</b>（3ターン目まで）すれば★を減らさずに終われます。段位（足軽→武士…）は負けても下がりません。'],
+    ['画面の見方', 'screen', [['相手', 'デッキと手札の枚数'], ['場所', '3つの場所で勝負する'], ['自分の場', 'ここにカードを置く'], ['手札', '出せるカード'], ['エネルギー', 'ターンの数だけ使える'], ['ターン終了', '置き終わったら押す'], ['ターン・メニュー', '6ターンで試合終了']]],
+    ['勝ち方', 'win', [['自分の合計', 'その場所の自分のパワーの合計'], ['相手の合計', '相手のパワーの合計'], ['場所が表になる', '1・2・3ターン目に左から1つずつ']], '<b>3つの場所のうち2つ</b>で合計が多ければ勝ち！'],
+    ['カードを出す', 'play', [['カードをえらぶ', 'タップ（クリック）かドラッグ'], ['場所をえらぶ', '置きたい場所をタップ'], ['エネルギー', 'カードのコストの分だけ使う'], ['説明', 'えらんだカードの効果が出る']], '1つの場所に<b>4枚まで</b>。ターン終了まではやり直せる'],
+    ['場所の効果', 'loc', [['場所をタップ', '表になった場所をえらぶ'], ['効果', '合うカードがパワーアップ']], 'カードの種類（政治・文化など）が場所に合うと強くなる'],
+    ['効果の種類', 'kinds', [['効果の種類', '<b>公開時</b>：表になったとき1回／<b>永続</b>：ずっと／<b>予言</b>：相手も同じ場所に出したら'], ['カードの種類', '政治・文化・宗教・戦い・外交'], ['場のカード', '左下の小さな字が種類']]],
+    ['史実コンボ', 'combo', [['コンボのカード', '金色の「史実コンボ」'], ['説明', '歴史でつながるカードと同じ場所にそろうと、パワーアップ']], '例：卑弥呼と魏への使い。カード図鑑でさがそう'],
+    ['天下取りと撤退', 'decl', [['天下取り宣言', '勝てば★+4・負けると★-2（3ターン目まで）'], ['撤退', '★を減らさずに試合を終わる（3ターン目まで）'], ['ターンと★', 'いまのターンと、勝ち負けの★']], 'CPU戦は勝ち★+2・負け★-1。段位は負けても下がらない'],
+    ['ランクとコイン', 'rank', [['CPUランク', 'CPU戦の★で上がる'], ['対人ランク', '友達との対戦で上がる'], ['コイン', '試合やミッションでもらえる'], ['デイリー', '毎日3つのミッション（最大200コイン）']]],
+    ['ショップ', 'shop', [['デッキ', '毎日8つ入れかわる'], ['ねだん', 'さいしょの5デッキは50コイン'], ['コイン', 'いま持っているコイン']], '買うとメニューの背景ももらえる'],
+    ['モード', 'modes', [['CPUと対戦', 'ふつうの対戦'], ['時代めぐり', '時代ごとの特別ルールで7章'], ['歴史パズル', '決まった場面から勝ちを考える'], ['友達と対戦', '2台で音を使って対戦']]]
   ];
+  function howtoPage(pg) {
+    const lay = layout === 'land' ? 'land' : 'port', marks = ((window.RC_HOWTO_MARKS || {})[pg[1]] || {})[lay] || [];
+    return `<div class="hw"><div class="hw-img ${lay}" style="background-image:url('${HIMG(`img/howto/${pg[1]}_${lay}.webp`)}')">${marks.map(m => `<i class="num" style="left:${m[1]}%;top:${m[2]}%">${m[0]}</i>`).join('')}</div>
+      <div class="glist">${pg[2].map((x, k) => `<div class="gi"><i class="num">${k + 1}</i><div><b>${x[0]}</b><span>${x[1]}</span></div></div>`).join('')}${pg[3] ? `<div class="hw-note">${pg[3]}</div>` : ''}</div></div>`;
+  }
   function openHowto(i, fromMenu) {
     const pg = HOWTO[i];
-    openModal(`<div class="mtitle">${pg[0]}</div>${pg[1] ? `<div class="mbody fitb">${pg[1]}</div>` : `<div class="mbody">${cardGuide()}</div>`}
+    openModal(`<div class="mtitle">${pg[0]}</div>${pg[1] ? `<div class="mbody">${howtoPage(pg)}</div>` : `<div class="mbody">${cardGuide()}</div>`}
       <div class="dots">${HOWTO.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
       <div class="mbtns"><button class="btn" id="hPrev" ${i === 0 ? 'disabled' : ''}>まえへ</button>
-      ${i < HOWTO.length - 1 ? '<button class="btn gold" id="hNext">つぎへ</button>' : `<button class="btn gold" id="hClose">とじる</button>`}</div>`, () => openHowto(i, fromMenu));
+      ${i < HOWTO.length - 1 ? '<button class="btn gold" id="hNext">つぎへ</button>' : `<button class="btn gold" id="hClose">とじる</button>`}</div>`, () => openHowto(i, fromMenu), 'big');
     if ($('#hPrev')) $('#hPrev').onclick = () => { SE.play('tap'); openHowto(i - 1, fromMenu); };
     if ($('#hNext')) $('#hNext').onclick = () => { SE.play('tap'); openHowto(i + 1, fromMenu); };
     if ($('#hClose')) $('#hClose').onclick = () => { SE.play('tap'); if (fromMenu && G) openMenu(); else closeModal(); };

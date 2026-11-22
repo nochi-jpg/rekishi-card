@@ -275,7 +275,7 @@
   function openTransfer() {
     U.openModal(`<div class="mtitle">セーブの引き継ぎ</div>
       <div class="mbody tr-body"><img class="tr-qr" src="${QR.make(saveCode(), 5)}" alt="QR"><div class="tr-t">このQRを新しい端末で読むと、名前・デッキ・コイン・ランク・勝率・進み具合を引き継げます。<br>（新しい端末でもデバッグモードの「引き継ぎQRを読む」から）</div></div>
-      <div class="mbtns"><button class="btn" id="trCam">カメラで読む</button><button class="btn" id="trImg">画像から読む</button><button class="btn gold" data-act="closeModal">とじる</button></div>`, openTransfer);
+      <div class="mbtns"><button class="btn" id="trCam">カメラで読む</button><button class="btn" id="trImg">画像から読む</button><button class="btn gold" data-act="closeModal">とじる</button></div>`, openTransfer, 'big');
     $('#trImg').onclick = async () => { const f = await pickImage(); if (!f) return; try { importSave(await QR.fromFile(f)); } catch (e) { U.openConfirm('読めませんでした', e.message, 'もどる', () => openTransfer(), 'gold'); } };
     $('#trCam').onclick = () => {
       U.openModal(`<div class="mtitle">引き継ぎQRを読む</div><div class="mbody"><div class="fr-cam"><video id="trVideo" playsinline muted></video><div class="fr-cam-msg" id="trMsg"></div></div></div>

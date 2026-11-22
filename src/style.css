@@ -1107,3 +1107,19 @@ button { font-family: inherit; font-weight: 900; color: inherit; border: 0; back
 .tr-body { display: flex; align-items: center; gap: 20px; } .port .tr-body { flex-direction: column; gap: 10px; }
 .tr-qr { width: 240px; height: 240px; background: #fff; border-radius: 8px; image-rendering: pixelated; flex: none; } .tr-t { font-size: 15px; line-height: 1.7; }
 .sb-btns .btn { white-space: nowrap; font-size: 15px; } .port .sb-btns .btn { font-size: 13px; padding: 0 6px; }
+
+/* ===== v0.6 あそびかた（スクショ＋番号） ===== */
+.hw { position: absolute; inset: 0; display: flex; gap: 18px; align-items: center; }
+.hw-img { position: relative; flex: none; border-radius: 10px; background: #000 center/cover no-repeat; box-shadow: 0 0 0 2px rgba(232,195,106,.6), 0 6px 16px rgba(0,0,0,.6); }
+.hw-img.land { width: 480px; height: 270px; } .hw-img.port { width: 170px; height: 340px; }
+.hw-img .num { position: absolute; transform: translate(-50%, -50%); box-shadow: 0 0 0 2px #fff, 0 2px 6px rgba(0,0,0,.8); }
+.hw .glist { gap: 8px; min-width: 0; } .hw .gi { font-size: 14px; } .hw .gi b { font-size: 15px; }
+.hw-note { margin-top: 4px; padding: 8px 10px; border-radius: 8px; background: rgba(232,195,106,.12); border: 1px solid rgba(232,195,106,.5); font-size: 13.5px; line-height: 1.5; }
+.port .hw { gap: 10px; align-items: flex-start; } .port .hw .gi { font-size: 12px; gap: 6px; } .port .hw .gi b { font-size: 13px; } .port .hw-note { font-size: 12px; }
+.land .box.big .dots { bottom: 92px; } .port .box.big .dots { bottom: 88px; }
+.port .hw-img .num { width: 20px; height: 20px; line-height: 20px; font-size: 12px; }
+.gi span b { display: inline; font-size: inherit; }
+.land .box.big .gcard { width: 177px; height: 252px; margin-left: 60px; } .land .box.big .guide { gap: 60px; }
+.land .gcard .n3 { top: 128px; } .land .gcard .n4 { top: 168px; }
+.port .box.big .mbtns .btn { font-size: 14px; padding: 0 6px; white-space: nowrap; }
+.bgp { display: flex; flex-direction: column; }

@@ -176,12 +176,12 @@ button { font-family: inherit; font-weight: 900; color: inherit; border: 0; back
 
 /* 手札のカード */
 .hc { background: linear-gradient(180deg, #2a2440, #141024); box-shadow: 0 6px 14px rgba(0,0,0,.6); transition: transform .15s, box-shadow .15s, opacity .2s; }
-.land .hc { width: 118px; height: 164px; } .port .hc { width: 110px; height: 122px; }
-.land .hc .art { left: 5px; right: 5px; top: 5px; height: 98px; } .port .hc .art { left: 4px; right: 4px; top: 4px; height: 66px; }
+.land .hc { width: 118px; height: 146px; } .port .hc { width: 110px; height: 122px; }
+.land .hc .art { left: 5px; right: 5px; top: 5px; height: 80px; } .port .hc .art { left: 4px; right: 4px; top: 4px; height: 76px; }
 .land .hc .cost { left: -6px; top: -6px; width: 32px; height: 36px; font-size: 19px; } .port .hc .cost { left: -5px; top: -5px; width: 28px; height: 31px; font-size: 16px; }
 .land .hc .pow { right: -6px; top: -6px; width: 32px; height: 36px; font-size: 19px; } .port .hc .pow { right: -5px; top: -5px; width: 28px; height: 31px; font-size: 16px; }
-.land .hc .nm { top: 108px; font-size: 14px; height: 22px; line-height: 22px; } .port .hc .nm { top: 72px; font-size: 13px; height: 20px; line-height: 20px; }
-.land .hc .kw { top: 136px; font-size: 12px; height: 20px; line-height: 20px; } .port .hc .kw { top: 96px; font-size: 11px; height: 19px; line-height: 19px; }
+.land .hc .nm { top: 91px; font-size: 14px; height: 22px; line-height: 22px; } .port .hc .nm { top: 81px; font-size: 12px; height: 18px; line-height: 18px; }
+.land .hc .kw { top: 118px; font-size: 12px; height: 20px; line-height: 20px; } .port .hc .kw { top: 101px; font-size: 10.5px; height: 17px; line-height: 17px; }
 .hc:hover { transform: translateY(-8px); box-shadow: 0 0 0 2px var(--gold3), 0 10px 24px rgba(0,0,0,.7); }
 .hc.sel { transform: translateY(-12px); box-shadow: 0 0 0 3px var(--gold3), 0 0 26px rgba(255,214,120,.85); }
 .hc.poor { filter: grayscale(.55) brightness(.75); }
@@ -192,10 +192,10 @@ button { font-family: inherit; font-weight: 900; color: inherit; border: 0; back
 /* 盤面のカード */
 .bc { background: #141024; box-shadow: 0 3px 8px rgba(0,0,0,.6); }
 .land .bc { width: 68px; height: 88px; } .port .bc { width: 66px; height: 80px; }
-.bc .art { inset: 3px; }
+.bc .art { left: 3px; right: 3px; top: 3px; height: 46px; } .port .bc .art { height: 44px; }
 .bc .cost { left: -4px; top: -4px; width: 20px; height: 22px; font-size: 12px; }
 .bc .pow { right: -5px; top: -5px; width: 26px; height: 28px; font-size: 16px; }
-.bc .bnm { position: absolute; left: 3px; right: 3px; bottom: 3px; min-height: 16px; padding: 2px 2px; font-size: 9.5px; line-height: 1.15; text-align: center; overflow: hidden;
+.bc .bnm { position: absolute; left: 3px; right: 3px; top: 50px; bottom: 3px; padding: 2px 2px; font-size: 9.5px; line-height: 1.15; text-align: center; overflow: hidden;
   background: rgba(8,6,16,.82); border-radius: 0 0 5px 5px; display: flex; align-items: center; justify-content: center; word-break: break-all; }
 .bc.pend { opacity: .8; } .bc.pend .frame { box-shadow: inset 0 0 0 2px var(--blue), inset 0 0 12px rgba(74,163,255,.6); animation: pendGlow 1.2s ease-in-out infinite; }
 @keyframes pendGlow { 50% { box-shadow: inset 0 0 0 2px #cfe8ff, inset 0 0 18px rgba(74,163,255,.9); } }
@@ -242,20 +242,20 @@ button { font-family: inherit; font-weight: 900; color: inherit; border: 0; back
 .dt-memo { position: absolute; overflow: hidden; line-height: 1.5; color: #e8dfc8; }
 .dt-memo::before { content: '歴史メモ'; display: block; font-size: 12px; color: var(--gold); letter-spacing: .1em; margin-bottom: 2px; }
 .dt-btn { position: absolute; }
-.land .dt-art { left: 16px; top: 16px; width: 272px; height: 160px; }
-.land .dt-name { left: 16px; right: 16px; top: 186px; font-size: 24px; height: 32px; line-height: 32px; }
-.land .dt-meta { left: 16px; right: 16px; top: 222px; }
-.land .dt-text { left: 16px; right: 16px; top: 256px; height: 94px; font-size: 16px; }
-.land .dt-memo { left: 16px; right: 16px; top: 352px; height: 104px; font-size: 14px; border-top: 1px solid rgba(232,195,106,.3); padding-top: 8px; }
+.land .dt-art { left: 16px; top: 16px; width: 272px; height: 200px; }
+.land .dt-name { left: 16px; right: 16px; top: 222px; font-size: 24px; height: 32px; line-height: 32px; }
+.land .dt-meta { left: 16px; right: 16px; top: 258px; }
+.land .dt-text { left: 16px; right: 16px; top: 290px; height: 76px; font-size: 16px; }
+.land .dt-memo { left: 16px; right: 16px; top: 370px; height: 88px; font-size: 14px; border-top: 1px solid rgba(232,195,106,.3); padding-top: 8px; }
 .land .dt-btn { left: 16px; right: 16px; bottom: 14px; }
 .land .dt-btn .btn { width: 100%; }
-.land #detail.withbtn .dt-memo { height: 34px; }
-.port .dt-art { left: 6px; top: 6px; width: 84px; height: 100px; }
-.port .dt-name { left: 100px; top: 4px; width: 190px; font-size: 17px; height: 24px; line-height: 24px; }
+.land #detail.withbtn .dt-memo { display: none; }
+.port .dt-art { left: 6px; top: 19px; width: 100px; height: 74px; }
+.port .dt-name { left: 114px; top: 4px; width: 176px; font-size: 17px; height: 24px; line-height: 24px; }
 .port .dt-meta { left: 296px; right: 6px; top: 4px; justify-content: flex-end; gap: 4px; }
 .port .dt-meta .m { height: 22px; min-width: 22px; font-size: 11.5px; padding: 0 5px; }
-.port .dt-text { left: 100px; right: 8px; top: 30px; height: 38px; font-size: 12.5px; line-height: 1.45; }
-.port .dt-memo { left: 100px; right: 8px; top: 70px; height: 38px; font-size: 11.5px; line-height: 1.45; }
+.port .dt-text { left: 114px; right: 8px; top: 30px; height: 38px; font-size: 12.5px; line-height: 1.45; }
+.port .dt-memo { left: 114px; right: 8px; top: 70px; height: 38px; font-size: 11.5px; line-height: 1.45; }
 .port .dt-memo::before { display: none; }
 .port .dt-btn { right: 8px; top: 70px; width: 130px; }
 .port .dt-btn .btn { height: 36px; font-size: 14px; width: 100%; padding: 0; }
@@ -389,16 +389,16 @@ button { font-family: inherit; font-weight: 900; color: inherit; border: 0; back
 .guide { position: absolute; inset: 0; display: flex; align-items: center; gap: 28px; }
 .gcard { position: relative; flex: none; }
 .gcard .card { transform-origin: 0 0; position: absolute; left: 0; top: 0; pointer-events: none; }
-.land .gcard { width: 177px; height: 246px; margin-left: 30px; } .land .gcard .card { transform: scale(1.5); }
+.land .gcard { width: 177px; height: 219px; margin-left: 30px; } .land .gcard .card { transform: scale(1.5); }
 .num { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; font-style: normal; font-size: 14px; font-weight: 900; color: #2a1b05; background: linear-gradient(180deg, #ffe7a3, #d9a743); box-shadow: 0 0 0 2px #2a1b05, 0 0 10px rgba(255,214,120,.8); flex: none; }
 .gcard .num { position: absolute; z-index: 5; }
-.land .gcard .n1 { left: -22px; top: -6px; } .land .gcard .n2 { right: -22px; top: -6px; } .land .gcard .n3 { left: -22px; top: 165px; } .land .gcard .n4 { left: -22px; top: 207px; }
+.land .gcard .n1 { left: -22px; top: -6px; } .land .gcard .n2 { right: -22px; top: -6px; } .land .gcard .n3 { left: -22px; top: 140px; } .land .gcard .n4 { left: -22px; top: 180px; }
 .glist { flex: 1; display: flex; flex-direction: column; gap: 10px; }
 .gi { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; line-height: 1.45; }
 .gi b { display: block; color: var(--gold3); font-size: 17px; } .gi span { color: var(--ink); }
 .port .guide { flex-direction: column; gap: 14px; align-items: stretch; }
 .port .gcard { width: 154px; height: 171px; align-self: center; } .port .gcard .card { transform: scale(1.4); }
-.port .gcard .n1 { left: -26px; top: -4px; } .port .gcard .n2 { right: -26px; top: -4px; } .port .gcard .n3 { left: -26px; top: 102px; } .port .gcard .n4 { left: -26px; top: 136px; }
+.port .gcard .n1 { left: -26px; top: -4px; } .port .gcard .n2 { right: -26px; top: -4px; } .port .gcard .n3 { left: -26px; top: 113px; } .port .gcard .n4 { left: -26px; top: 140px; }
 .port .gi { font-size: 13.5px; } .port .gi b { font-size: 15px; } .port .glist { gap: 7px; }
 .gcard .lb { display: block; }
 .b-decl span, .b-ret span { white-space: nowrap; }

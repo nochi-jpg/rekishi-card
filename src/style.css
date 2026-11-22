@@ -1207,3 +1207,14 @@ button { font-family: inherit; font-weight: 900; color: inherit; border: 0; back
 .land .qb-box img { width: 560px; height: 560px; } .port .qb-box img { width: 440px; height: 440px; }
 .qb-box .btn { width: 220px; }
 .port .qr-tip { display: none; }
+/* v0.6.3 メニュー6つ（ひとりで／友達と） */
+.land .mm-list { top: 236px; gap: 10px; } .land .mm { height: 64px; } .land .mm-ic { width: 48px; height: 48px; } .land .mm-ic .ico { width: 26px; height: 26px; }
+.land .mm b { font-size: 25px; } .land .mm span { font-size: 13px; }
+.port .mm-list { top: 384px; gap: 8px; } .port .mm { height: 78px; } .port .mm-ic { width: 52px; height: 52px; } .port .mm-ic .ico { width: 28px; height: 28px; }
+.mm.blue { background: linear-gradient(90deg, rgba(40,90,170,.95), rgba(20,40,90,.9)) !important; }
+.mm.blue .mm-ic { background: radial-gradient(circle at 35% 30%, #cfe8ff, #3d8ce8); color: #0b2a52; border-color: #cfe8ff; }
+.mbody.modes.three { grid-template-columns: repeat(3, minmax(0, 1fr)); } .port .mbody.modes.three { grid-template-columns: 1fr; }
+.land .modes.three .mode { height: 300px !important; flex-direction: column !important; justify-content: center !important; align-items: center !important; text-align: center; }
+.land .modes.three .md-t { align-items: center; text-align: center; } .land .modes.three .mode::after { background: linear-gradient(180deg, rgba(10,8,24,.35), rgba(10,8,24,.9)); }
+.land .modes.three .md-ic { width: 84px; height: 84px; padding: 16px; }
+.port .modes.three .mode { height: 150px !important; }

@@ -1214,6 +1214,17 @@ button { font-family: inherit; font-weight: 900; color: inherit; border: 0; back
 .land .qb-box img { width: 560px; height: 560px; } .port .qb-box img { width: 440px; height: 440px; }
 .qb-box .btn { width: 220px; }
 .port .qr-tip { display: none; }
+/* v0.6.3 メニュー6つ（ひとりで／友達と） */
+.land .mm-list { top: 236px; gap: 10px; } .land .mm { height: 64px; } .land .mm-ic { width: 48px; height: 48px; } .land .mm-ic .ico { width: 26px; height: 26px; }
+.land .mm b { font-size: 25px; } .land .mm span { font-size: 13px; }
+.port .mm-list { top: 384px; gap: 8px; } .port .mm { height: 78px; } .port .mm-ic { width: 52px; height: 52px; } .port .mm-ic .ico { width: 28px; height: 28px; }
+.mm.blue { background: linear-gradient(90deg, rgba(40,90,170,.95), rgba(20,40,90,.9)) !important; }
+.mm.blue .mm-ic { background: radial-gradient(circle at 35% 30%, #cfe8ff, #3d8ce8); color: #0b2a52; border-color: #cfe8ff; }
+.mbody.modes.three { grid-template-columns: repeat(3, minmax(0, 1fr)); } .port .mbody.modes.three { grid-template-columns: 1fr; }
+.land .modes.three .mode { height: 300px !important; flex-direction: column !important; justify-content: center !important; align-items: center !important; text-align: center; }
+.land .modes.three .md-t { align-items: center; text-align: center; } .land .modes.three .mode::after { background: linear-gradient(180deg, rgba(10,8,24,.35), rgba(10,8,24,.9)); }
+.land .modes.three .md-ic { width: 84px; height: 84px; padding: 16px; }
+.port .modes.three .mode { height: 150px !important; }
 
 </style>
 </head>
@@ -1241,7 +1252,8 @@ button { font-family: inherit; font-weight: 900; color: inherit; border: 0; back
     <div class="tt-menu">
       <div class="hud" id="menuHud"></div>
       <div class="mm-list">
-        <button class="mm gold" data-act="toDeck"><i class="mm-ic" data-ico="battle"></i><div class="mm-t"><b>対戦</b><span>CPU・時代めぐり・パズル・友達</span></div></button>
+        <button class="mm gold" data-act="toDeck"><i class="mm-ic" data-ico="battle"></i><div class="mm-t"><b>ひとりでバトル</b><span>CPU対戦・時代めぐり・歴史パズル</span></div></button>
+        <button class="mm blue" data-act="modeFriend"><i class="mm-ic" data-ico="friends"></i><div class="mm-t"><b>友達とバトル</b><span>2台で音を使って対戦</span></div></button>
         <button class="mm " data-act="shop"><i class="mm-ic" data-ico="shop"></i><div class="mm-t"><b>ショップ</b><span>デッキを手に入れる</span></div></button>
         <button class="mm " data-act="zukan"><i class="mm-ic" data-ico="book"></i><div class="mm-t"><b>カード図鑑</b><span>集めたカードを見る</span></div></button>
         <button class="mm " data-act="howto"><i class="mm-ic" data-ico="help"></i><div class="mm-t"><b>あそびかた</b><span>ルールを読む</span></div></button>
@@ -1291,7 +1303,7 @@ button { font-family: inherit; font-weight: 900; color: inherit; border: 0; back
   </section>
   <section id="friend" class="screen">
     <div class="title-bg dim"></div>
-    <div class="deck-head">友達と対戦</div>
+    <div class="deck-head">友達とバトル</div>
     <div class="fr-body" id="frBody"></div>
   </section>
   <section id="zlist" class="screen">
@@ -3650,9 +3662,9 @@ window.RC_SE = {"tap": "data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2Z
   function openModes() {
     const M = (act, ic, bg, t, sub, cls, badge) => `<button class="mode ${cls || ''}" data-act="${act}"><div class="md-bg" style="background-image:url('${IMG(`img/menubg/${bg}.webp`)}')"></div>${window.RC_ICON(ic, 'md-ic')}<div class="md-t"><b>${t}${badge ? `<em>${badge}</em>` : ''}</b><span>${sub}</span></div></button>`;
     const pz = (SV.puzzle && SV.puzzle.done.length) || 0, cp = (SV.camp && SV.camp.done.length) || 0;
-    U.openModal(`<div class="mtitle">対戦モード</div><div class="mbody modes">
+    U.openModal(`<div class="mtitle">ひとりでバトル</div><div class="mbody modes three">
       ${M('modeCpu', 'cpu', 'nobunaga', 'CPUと対戦', 'デッキをえらんで勝負。CPUランクが上がる', 'gold')}${M('modeCamp', 'map', 'himiko', '時代めぐり', '7つの時代を特別ルールで旅する', '', cp + ' / 21')}
-      ${M('modePuzzle', 'puzzle', 'genpaku', '歴史パズル', '最終ターン、1手で勝ちを見つけよう', '', pz + ' / 19')}${M('modeFriend', 'friends', 'saigo', '友達と対戦', '2台で音を使って対戦。対人ランクが上がる')}</div>
+      ${M('modePuzzle', 'puzzle', 'genpaku', '歴史パズル', '最終ターン、1手で勝ちを見つけよう', '', pz + ' / 19')}</div>
       <div class="mbtns"><button class="btn" data-act="closeModal" data-ico="back">もどる</button></div>`, openModes, 'big');
   }
   function openDeckFor(purpose, head, cb) {
@@ -4432,7 +4444,7 @@ else if (typeof exports === 'object')
 
   // ---------- デッキをえらんで同期 ----------
   function pickDeck() {
-    M.openDeckFor('friend', '友達と対戦：デッキをえらぶ', (deck) => {
+    M.openDeckFor('friend', '友達とバトル：デッキをえらぶ', (deck) => {
       F.deck = deck; F.seed = (Math.random() * 0x10000) | 0; F.round = (F.round || 0) + 1;
       ensureAudio().then(() => deckSync()).catch(e => { U.openConfirm('マイクが使えません', e.message + '<br>マイクを許可してから、もう一度ためしてね。', 'もどる', () => open(), 'gold'); });
     });

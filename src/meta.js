@@ -420,9 +420,9 @@
   function openModes() {
     const M = (act, ic, bg, t, sub, cls, badge) => `<button class="mode ${cls || ''}" data-act="${act}"><div class="md-bg" style="background-image:url('${IMG(`img/menubg/${bg}.webp`)}')"></div>${window.RC_ICON(ic, 'md-ic')}<div class="md-t"><b>${t}${badge ? `<em>${badge}</em>` : ''}</b><span>${sub}</span></div></button>`;
     const pz = (SV.puzzle && SV.puzzle.done.length) || 0, cp = (SV.camp && SV.camp.done.length) || 0;
-    U.openModal(`<div class="mtitle">対戦モード</div><div class="mbody modes">
+    U.openModal(`<div class="mtitle">ひとりでバトル</div><div class="mbody modes three">
       ${M('modeCpu', 'cpu', 'nobunaga', 'CPUと対戦', 'デッキをえらんで勝負。CPUランクが上がる', 'gold')}${M('modeCamp', 'map', 'himiko', '時代めぐり', '7つの時代を特別ルールで旅する', '', cp + ' / 21')}
-      ${M('modePuzzle', 'puzzle', 'genpaku', '歴史パズル', '最終ターン、1手で勝ちを見つけよう', '', pz + ' / 19')}${M('modeFriend', 'friends', 'saigo', '友達と対戦', '2台で音を使って対戦。対人ランクが上がる')}</div>
+      ${M('modePuzzle', 'puzzle', 'genpaku', '歴史パズル', '最終ターン、1手で勝ちを見つけよう', '', pz + ' / 19')}</div>
       <div class="mbtns"><button class="btn" data-act="closeModal" data-ico="back">もどる</button></div>`, openModes, 'big');
   }
   function openDeckFor(purpose, head, cb) {

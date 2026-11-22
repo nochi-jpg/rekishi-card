@@ -162,7 +162,7 @@
 
   // ---------- デッキをえらんで同期 ----------
   function pickDeck() {
-    M.openDeckFor('friend', '友達と対戦：デッキをえらぶ', (deck) => {
+    M.openDeckFor('friend', '友達とバトル：デッキをえらぶ', (deck) => {
       F.deck = deck; F.seed = (Math.random() * 0x10000) | 0; F.round = (F.round || 0) + 1;
       ensureAudio().then(() => deckSync()).catch(e => { U.openConfirm('マイクが使えません', e.message + '<br>マイクを許可してから、もう一度ためしてね。', 'もどる', () => open(), 'gold'); });
     });

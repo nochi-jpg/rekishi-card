@@ -42,7 +42,8 @@
         <div class="rt"><div class="rl">CPUランク</div><div class="rn">${c.name}</div>${bar(c)}<div class="rs">${c.max ? '最高ランク' : '次まで ★' + (c.need - c.have)}</div></div></div>
       <div class="rk pvp"><div class="em" style="background-image:url('${p.img}')"></div>
         <div class="rt"><div class="rl">対人ランク</div><div class="rn">${p.name}</div>${bar(p)}<div class="rs">2台対戦で上がる</div></div></div>
-      <div class="coin-box"><div class="ci"></div><b id="coinNum">${SV.coins}</b></div>`;
+      <div class="coin-box"><div class="ci"></div><b id="coinNum">${SV.coins}</b></div>
+      <div class="name-plate"><small>なまえ</small><b>${SV.name || '－'}</b></div>`;
   }
   function renderHud() { $$('.hud').forEach(h => h.innerHTML = hudHtml()); }
 
@@ -96,7 +97,7 @@
     const T = $('#title');
     T.className = 'screen on seq'; U.show('title'); T.classList.add('seq');
     petals();
-    const img = $('.tt-img', T), white = $('.tt-white', T);
+    const img = $('.tt-img', T), white = $('.tt-white', T); img.style.backgroundImage = '';
     const steps = [];
     let cancelled = false, anims = [];
     const run = (el, kf, opt) => { const a = el.animate(kf, Object.assign({ fill: 'forwards' }, opt)); anims.push(a); return a.finished.catch(() => { }); };
@@ -141,8 +142,9 @@
     };
     play();
   }
+  function applyBg() { const im = $('#title .tt-img'); if (im) im.style.backgroundImage = SV.bg && isOwned(SV.bg) ? `url('${IMG(`img/menubg/${SV.bg}.webp`)}')` : ''; }
   function openMenu() {
-    const T = $('#title');
+    const T = $('#title'); applyBg();
     T.classList.add('ready', 'menu'); T.classList.remove('seq');
     renderHud();
     if (!SV.started) setTimeout(firstRun, 500);
@@ -151,6 +153,7 @@
 
   // ---------- 最初の起動 ----------
   function firstRun() {
+    if (!SV.name) return openNameInput(firstRun, true);
     U.openModal(`<div class="mtitle">ようこそ</div>
       <div class="mbody fitb" style="text-align:center">本じい「わしは歴史の教科書、本じいじゃ。<br>はじめに、遊び方を教えてやろうか？」</div>
       <div class="mbtns"><button class="btn" id="ftSkip">あとで</button><button class="btn gold" id="ftTut">教えてもらう</button></div>`);
@@ -182,7 +185,8 @@
     U.SE.play('cheer');
     const el = document.createElement('div'); el.className = 'getfx';
     el.innerHTML = `<div class="gf-rays"></div><div class="gf-face" style="background-image:url('${IMG(`img/face/${d.face}.webp`)}')"></div>
-      <div class="gf-t1">デッキを手に入れた</div><div class="gf-t2">${d.name}</div><div class="gf-t3">${d.era}時代・「${d.theme}」　カード12枚が図鑑に登録された</div><div class="gf-tap">タップしてつづける</div>`;
+      <div class="gf-t1">デッキを手に入れた</div><div class="gf-t2">${d.name}</div><div class="gf-t3">${d.era}時代・「${d.theme}」　カード12枚が図鑑に登録された</div>
+      <div class="gf-bg"><div class="gb-img" style="background-image:url('${IMG(`img/menubg/${id}.webp`)}')"></div><div class="gb-t">メニューの背景もプレゼント！<small>設定の「メニューの背景」で変えられる</small></div></div><div class="gf-tap">タップしてつづける</div>`;
     $('#fx').appendChild(el); el.style.pointerEvents = 'auto';
     for (let i = 0; i < 40; i++) { const c = document.createElement('i'); c.className = 'gf-p'; c.style.setProperty('--a', (Math.random() * 360) + 'deg'); c.style.setProperty('--r', (160 + Math.random() * 260) + 'px'); c.style.animationDelay = (Math.random() * .3) + 's'; el.appendChild(c); }
     setTimeout(() => { el.onclick = () => { el.classList.add('out'); setTimeout(() => { el.remove(); done && done(); }, 300); }; }, 700);
@@ -245,12 +249,15 @@
   }
 
   // ---------- 図鑑の一覧・デッキの一覧 ----------
+  // デッキケース（四角いケースに丸い顔）
   function deckTile(d, act, extra) {
     const own = isOwned(d.id);
-    return `<div class="dtile${own ? '' : ' locked'}" data-act="${own ? act : 'lockedDeck'}" data-deck="${d.id}" style="--dc:${d.color}">
-        <div class="df" style="background-image:url('${IMG(`img/face/${d.face}.webp`)}')"></div>
-        <div class="dt"><div class="dn fit">${d.name}</div><div class="de fit">${d.era}時代・テーマ「${d.theme}」</div><div class="dd fit">${own ? d.desc : 'ショップで手に入る　' + (PRICE[d.id] || 150) + '枚'}</div></div>
-        ${own ? (extra || '') : '<div class="lk">未入手</div>'}
+    return `<div class="dcase${own ? '' : ' locked'}" data-act="${own ? act : 'lockedDeck'}" data-deck="${d.id}" style="--c:${d.color}">
+        <div class="dc-era">${d.era}</div><div class="dc-clasp"></div>
+        <div class="dc-face" style="background-image:url('${IMG(`img/face/${d.face}.webp`)}')"></div>
+        <div class="dc-nm fit">${d.name}</div><div class="dc-th fit">「${d.theme}」</div>
+        <div class="dc-ds fitb">${own ? d.desc : '未入手　ショップで ' + (PRICE[d.id] || 150) + 'コイン'}</div>
+        ${own ? (extra || '') : ''}
       </div>`;
   }
   function sortedDecks() { const all = Object.values(DECKS); return all.filter(d => isOwned(d.id)).concat(all.filter(d => !isOwned(d.id))); }
@@ -339,6 +346,93 @@
     });
   }
 
+  // ---------- 名前（ひらがなとー、1〜8文字） ----------
+  const KANA = ['あいうえお', 'かきくけこ', 'さしすせそ', 'たちつてと', 'なにぬねの', 'はひふへほ', 'まみむめも', 'や　ゆ　よ', 'らりるれろ', 'わ　を　ん'];
+  const DAKU = { 'か': 'が', 'き': 'ぎ', 'く': 'ぐ', 'け': 'げ', 'こ': 'ご', 'さ': 'ざ', 'し': 'じ', 'す': 'ず', 'せ': 'ぜ', 'そ': 'ぞ', 'た': 'だ', 'ち': 'ぢ', 'つ': 'づ', 'て': 'で', 'と': 'ど', 'は': 'ば', 'ひ': 'び', 'ふ': 'ぶ', 'へ': 'べ', 'ほ': 'ぼ', 'う': 'ゔ' };
+  const HAN = { 'は': 'ぱ', 'ひ': 'ぴ', 'ふ': 'ぷ', 'へ': 'ぺ', 'ほ': 'ぽ' };
+  const SMALL = { 'あ': 'ぁ', 'い': 'ぃ', 'う': 'ぅ', 'え': 'ぇ', 'お': 'ぉ', 'つ': 'っ', 'や': 'ゃ', 'ゆ': 'ゅ', 'よ': 'ょ', 'わ': 'ゎ' };
+  const inv = (o) => Object.fromEntries(Object.entries(o).map(([a, b]) => [b, a]));
+  const UNDAKU = inv(DAKU), UNHAN = inv(HAN), BIG = inv(SMALL);
+  // ローマ字入力（日本語入力がオフのPCキーボード用）
+  const ROMA = { a: 'あ', i: 'い', u: 'う', e: 'え', o: 'お', ka: 'か', ki: 'き', ku: 'く', ke: 'け', ko: 'こ', sa: 'さ', si: 'し', shi: 'し', su: 'す', se: 'せ', so: 'そ', ta: 'た', ti: 'ち', chi: 'ち', tu: 'つ', tsu: 'つ', te: 'て', to: 'と',
+    na: 'な', ni: 'に', nu: 'ぬ', ne: 'ね', no: 'の', ha: 'は', hi: 'ひ', hu: 'ふ', fu: 'ふ', he: 'へ', ho: 'ほ', ma: 'ま', mi: 'み', mu: 'む', me: 'め', mo: 'も', ya: 'や', yu: 'ゆ', yo: 'よ', ra: 'ら', ri: 'り', ru: 'る', re: 'れ', ro: 'ろ',
+    wa: 'わ', wo: 'を', nn: 'ん', ga: 'が', gi: 'ぎ', gu: 'ぐ', ge: 'げ', go: 'ご', za: 'ざ', zi: 'じ', ji: 'じ', zu: 'ず', ze: 'ぜ', zo: 'ぞ', da: 'だ', di: 'ぢ', du: 'づ', de: 'で', do: 'ど', ba: 'ば', bi: 'び', bu: 'ぶ', be: 'べ', bo: 'ぼ',
+    pa: 'ぱ', pi: 'ぴ', pu: 'ぷ', pe: 'ぺ', po: 'ぽ', kya: 'きゃ', kyu: 'きゅ', kyo: 'きょ', sya: 'しゃ', sha: 'しゃ', syu: 'しゅ', shu: 'しゅ', syo: 'しょ', sho: 'しょ', tya: 'ちゃ', cha: 'ちゃ', tyu: 'ちゅ', chu: 'ちゅ', tyo: 'ちょ', cho: 'ちょ',
+    nya: 'にゃ', nyu: 'にゅ', nyo: 'にょ', hya: 'ひゃ', hyu: 'ひゅ', hyo: 'ひょ', mya: 'みゃ', myu: 'みゅ', myo: 'みょ', rya: 'りゃ', ryu: 'りゅ', ryo: 'りょ', gya: 'ぎゃ', gyu: 'ぎゅ', gyo: 'ぎょ', ja: 'じゃ', ju: 'じゅ', jo: 'じょ',
+    bya: 'びゃ', byu: 'びゅ', byo: 'びょ', pya: 'ぴゃ', pyu: 'ぴゅ', pyo: 'ぴょ', xa: 'ぁ', xi: 'ぃ', xu: 'ぅ', xe: 'ぇ', xo: 'ぉ', xtu: 'っ', ltu: 'っ', xya: 'ゃ', xyu: 'ゅ', xyo: 'ょ', la: 'ぁ', li: 'ぃ', lu: 'ぅ', le: 'ぇ', lo: 'ぉ', '-': 'ー' };
+  function romaToKana(str) {
+    let out = '', buf = '';
+    for (const ch of str.toLowerCase()) {
+      if (!/[a-z\-]/.test(ch)) { out += buf.replace(/n$/, 'ん') + ch; buf = ''; continue; }
+      buf += ch;
+      if (buf.length >= 2 && buf[0] === buf[1] && buf[0] !== 'n' && /[bcdfghjkmpqrstvwxyz]/.test(buf[0])) { out += 'っ'; buf = buf.slice(1); }
+      if (buf.length >= 2 && buf[0] === 'n' && !/[aiueoy n]/.test(buf[1])) { out += 'ん'; buf = buf.slice(1); }
+      if (ROMA[buf]) { out += ROMA[buf]; buf = ''; }
+      else if (buf.length >= 3) { buf = buf.slice(1); }
+    }
+    return { kana: out, rest: buf };
+  }
+  const NAME_OK = /^[ぁ-ゖー]{1,8}$/;
+  function cleanName(v) { return (v || '').replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60)).replace(/[^ぁ-ゖー]/g, '').slice(0, 8); }
+  function openNameInput(done, first) {
+    let val = SV.name || '';
+    const keys = KANA.map(col => `<div class="kcol">${[...col].map(k => k === '　' ? '<i></i>' : `<button class="kk" data-k="${k}">${k}</button>`).join('')}</div>`).join('');
+    U.openModal(`<div class="mtitle">${first ? 'なまえを入れてね' : '名前をかえる'}</div>
+      <div class="mbody namebody">
+        <div class="nm-row"><input id="nmIn" class="nm-in" maxlength="16" autocomplete="off" spellcheck="false" placeholder="ひらがな 8文字まで" value="${val}"><div class="nm-cnt" id="nmCnt"></div></div>
+        <div class="nm-msg" id="nmMsg">キーボード・下のボタン・スマホの入力、どれでも入れられます</div>
+        <div class="kbd">${keys}<div class="kcol sp"><button class="kk" data-k="゛">゛</button><button class="kk" data-k="゜">゜</button><button class="kk" data-k="小">小</button><button class="kk" data-k="ー">ー</button><button class="kk del" data-k="del">けす</button></div></div>
+      </div>
+      <div class="mbtns">${first ? '' : '<button class="btn" id="nmCancel">やめる</button>'}<button class="btn gold" id="nmOk">けってい</button></div>`, null, 'big');
+    const inp = $('#nmIn'), msg = $('#nmMsg'), cnt = $('#nmCnt');
+    let composing = false;
+    const show = () => { cnt.textContent = `${[...inp.value.replace(/[a-z]/gi, '')].length} / 8`; $('#nmOk').disabled = !NAME_OK.test(inp.value); };
+    const sanitize = () => {
+      const half = inp.value.replace(/[ａ-ｚＡ-Ｚ－]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+      const r = romaToKana(half), kata = r.kana.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
+      const ok = cleanName(kata);
+      if (kata.replace(/[^ぁ-ゖー]/g, '') !== kata) msg.textContent = 'ひらがなだけ使えます（漢字・数字・記号はけしました）';
+      inp.value = ok + ([...ok].length < 8 ? r.rest : ''); show();
+    };
+    inp.addEventListener('compositionstart', () => composing = true);
+    inp.addEventListener('compositionend', () => { composing = false; sanitize(); });
+    inp.addEventListener('input', () => { if (!composing) sanitize(); });
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !composing && NAME_OK.test(inp.value)) $('#nmOk').click(); });
+    document.querySelectorAll('.kbd .kk').forEach(b => b.onclick = (e) => {
+      e.stopPropagation(); U.SE.play('tap', 0.6); const k = b.dataset.k; let v = inp.value.replace(/[a-z]+$/i, ''); const last = v.slice(-1);
+      if (k === 'del') v = v.slice(0, -1);
+      else if (k === '゛') v = v.slice(0, -1) + (DAKU[last] || UNDAKU[last] || (HAN[UNHAN[last]] ? DAKU[UNHAN[last]] : last));
+      else if (k === '゜') v = v.slice(0, -1) + (HAN[last] || UNHAN[last] || (UNDAKU[last] && HAN[UNDAKU[last]]) || last);
+      else if (k === '小') v = v.slice(0, -1) + (SMALL[last] || BIG[last] || last);
+      else if ([...v].length < 8) v += k;
+      inp.value = v; show();
+    });
+    show();
+    if (!('ontouchstart' in window)) setTimeout(() => inp.focus(), 100);
+    if ($('#nmCancel')) $('#nmCancel').onclick = () => { U.SE.play('tap'); done && done(); };
+    $('#nmOk').onclick = () => {
+      const v = inp.value; if (!NAME_OK.test(v)) { msg.textContent = 'ひらがなで1〜8文字にしてね'; U.SE.play('ng'); return; }
+      SV.name = v; save(); renderHud(); U.SE.play('decide'); U.closeModal(); done && done();
+    };
+  }
+
+  // ---------- メニューの背景 ----------
+  function openBgPicker(page) {
+    page = page || 0;
+    const list = ['title'].concat(Object.keys(DECKS).filter(isOwned));
+    const per = U.layout === 'land' ? 6 : 4, pages = Math.max(1, Math.ceil(list.length / per));
+    page = Math.min(page, pages - 1);
+    const cur = SV.bg && isOwned(SV.bg) ? SV.bg : 'title';
+    const items = list.slice(page * per, page * per + per).map(id => `<button class="bgp${id === cur ? ' on' : ''}" data-bg="${id}"><div class="bp-img" style="background-image:url('${id === 'title' ? IMG('img/ui/title_bg.webp') : IMG(`img/menubg/${id}.webp`)}')"></div><div class="bp-nm">${id === 'title' ? 'タイトル' : DECKS[id].name}</div></button>`).join('');
+    U.openModal(`<div class="mtitle">メニューの背景</div>
+      <div class="mbody bgpick">${items}</div>
+      <div class="mbtns"><button class="btn" id="bpPrev" ${page ? '' : 'disabled'}>まえへ</button><span class="pgno">${page + 1} / ${pages}</span><button class="btn" id="bpNext" ${page < pages - 1 ? '' : 'disabled'}>つぎへ</button><button class="btn gold" id="bpBack">もどる</button></div>`, () => openBgPicker(page));
+    document.querySelectorAll('.bgp').forEach(b => b.onclick = (e) => { e.stopPropagation(); U.SE.play('decide'); SV.bg = b.dataset.bg === 'title' ? '' : b.dataset.bg; save(); applyBg(); openBgPicker(page); });
+    $('#bpPrev').onclick = () => { U.SE.play('tap'); openBgPicker(page - 1); };
+    $('#bpNext').onclick = () => { U.SE.play('tap'); openBgPicker(page + 1); };
+    $('#bpBack').onclick = () => { U.SE.play('tap'); U.closeModal(); };
+  }
+
   // ---------- デバッグモード（設定の「設定」を20回おす） ----------
   function openDebug(msg) {
     const B = (id, t, c) => `<button class="btn ${c || ''}" data-dbg="${id}">${t}</button>`;
@@ -381,6 +475,6 @@
     if ($('#starter').classList.contains('on')) openStarter();
     renderHud(); U.fitAll();
   }, 60));
-  window.RC_META = { openDebug, openStarter, boot, onShow, action, toMenu, openMenu, openShop, openZList, renderDeckList, applyResult, resultHtml, animateResult, owned, isOwned, rankInfo, BGM, get save() { return SV; }, markTutorial() { SV.tutorial = true; save(); }, reset() { U.store.set(SAVE_KEY, null); SV = load(); } };
+  window.RC_META = { playerName: () => SV.name || '－', openNameInput, openBgPicker, applyBg, openDebug, openStarter, boot, onShow, action, toMenu, openMenu, openShop, openZList, renderDeckList, applyResult, resultHtml, animateResult, owned, isOwned, rankInfo, BGM, get save() { return SV; }, markTutorial() { SV.tutorial = true; save(); }, reset() { U.store.set(SAVE_KEY, null); SV = load(); } };
   boot();
 })();

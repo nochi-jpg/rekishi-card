@@ -9,7 +9,7 @@ def b64(path):
     return base64.b64encode(open(path, 'rb').read()).decode()
 
 css = open('src/style.css', encoding='utf-8').read()
-js = ''.join(open(p, encoding='utf-8').read() + '\n' for p in ['lib/se.js', 'src/data.js', 'src/engine.js', 'src/ui.js', 'src/meta.js', 'src/tutorial.js'])
+js = ''.join(open(p, encoding='utf-8').read() + '\n' for p in ['lib/se.js', 'src/data.js', 'src/engine.js', 'src/ui.js', 'src/meta.js', 'src/tutorial.js', 'src/lines.js'])
 html = open('index.html', encoding='utf-8').read()
 
 # フォントを使う文字だけにしぼる
@@ -28,7 +28,7 @@ css = css.replace("url('../fonts/ZenKakuGothicNew-Black.ttf')", f"url(data:font/
 
 # 画像：CSSの url('../img/...') と JSの `img/...` を置きかえる
 imgs = {}
-for d in ['card', 'face', 'loc', 'ui', 'rank', 'tut']:
+for d in ['card', 'face', 'loc', 'ui', 'rank', 'tut', 'vic', 'menubg']:
     for f in os.listdir(f'img/{d}'):
         imgs[f'img/{d}/{f}'] = 'data:image/webp;base64,' + b64(f'img/{d}/{f}')
 css = re.sub(r"url\('\.\./(img/[^']+)'\)", lambda m: f"url('{imgs[m.group(1)]}')", css)
@@ -42,6 +42,7 @@ js = js.replace("const imgUrl = (d) => d.img.startsWith('face:') ? `img/face/${d
                 "const imgUrl = (d) => RC_IMG[d.img.startsWith('face:') ? `img/face/${d.img.slice(5)}.webp` : `img/card/${d.img}.webp`];")
 js = js.replace("url('img/face/${od.face}.webp')", "url('${RC_IMG[`img/face/${od.face}.webp`]}')")
 js = js.replace("url('img/face/${d.face}.webp')", "url('${RC_IMG[`img/face/${d.face}.webp`]}')")
+js = js.replace("url('img/vic/${ln.sp}.webp')", "url('${RC_IMG[`img/vic/${ln.sp}.webp`]}')")
 js = js.replace("url('img/loc/${L.img}.webp')", "url('${RC_IMG[`img/loc/${L.img}.webp`]}')")
 assert "'img/" not in js.replace('"img/', ''), '置きかえ忘れの画像パスがある'
 

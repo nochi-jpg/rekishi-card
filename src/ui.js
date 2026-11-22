@@ -119,14 +119,42 @@
   const pw = (uid) => V.snap.powers[uid];
 
   const TUT = () => window.RC_TUTORIAL && RC_TUTORIAL.active ? RC_TUTORIAL : null;
+  // 試合の記録（ブラウザを閉じても、つづきから再開できるように）
+  let RES = null;
+  const saveRes = () => { if (RES && !RES.o.tut) store.set('resume', RES); };
+  function clearResume() { RES = null; store.set('resume', null); }
   function newGame(deckId, o) {
     o = o || {};
     myDeck = deckId; const others = Object.keys(DECKS).filter(k => k !== deckId); cpuDeck = o.cpu || others[Math.floor(Math.random() * others.length)];
-    G = E.create({ seed: o.seed || ((Math.random() * 1e9) | 0), decks: [myDeck, cpuDeck], fixed: o.fixed });
+    const seed = o.seed || ((Math.random() * 1e9) | 0);
+    G = E.create({ seed, decks: [myDeck, cpuDeck], fixed: o.fixed, rules: o.rules });
+    G.S.mode = o.mode || 'cpu';
+    RES = { v: 1, deck: myDeck, cpu: cpuDeck, seed, o: { fixed: o.fixed, rules: o.rules, mode: o.mode || 'cpu', tut: !!o.tut, extra: o.extra || null }, turns: [] };
+    saveRes();
     V = { resolving: false, rev: new Set(), snap: G.snap(), hide: new Set(), oppShown: false, locShown: [false, false, false], disp: null };
     log = { combos: [] }; sel = null; busy = true;
     show('game'); renderAll(); camera(-1, 1, 1, 10);
     setTimeout(nextTurn, 500);
+  }
+  // 記録から試合を組み立てなおす（演出なし）
+  function rebuild(R) {
+    const g = E.create({ seed: R.seed, decks: [R.deck, R.cpu], fixed: R.o.fixed, rules: R.o.rules }); g.S.mode = R.o.mode;
+    for (const t of R.turns) {
+      g.startTurn();
+      [[1, t.q], [0, t.p]].forEach(([pl, list]) => (list || []).forEach(([u, li]) => g.play(pl, u, li)));
+      if (t.d1) g.declare(1); if (t.d0) g.declare(0);
+      g.endTurn();
+    }
+    return g;
+  }
+  function resumeGame(R) {
+    myDeck = R.deck; cpuDeck = R.cpu; RES = R;
+    G = rebuild(R);
+    V = { resolving: false, rev: new Set(), snap: G.snap(), hide: new Set(), oppShown: false, locShown: [0, 1, 2].map(li => G.S.turn >= li + 1), disp: null };
+    log = { combos: [] }; sel = null; busy = true;
+    show('game'); renderAll(); camera(-1, 1, 1, 10);
+    banner('つづきから', 'ターン' + (G.S.turn + 1) + 'から再開します', '', 1200);
+    setTimeout(nextTurn, 1400);
   }
 
   // ---------- 描画 ----------
@@ -144,7 +172,7 @@
       el.innerHTML = handInner(d, p, pc, cv, cc);
     } else {
       el.innerHTML = `<div class="art${isFace(d) ? ' face' : ''}" style="background-image:url('${imgUrl(d)}')"></div><div class="frame"></div>
-        <div class="cost">${d.cost}</div><div class="pow${pc}">${p}</div><div class="bnm">${d.name}</div>`;
+        <div class="cost">${d.cost}</div><div class="pow${pc}">${p}</div><div class="bnm">${d.name}</div>${tagDots(d)}`;
       if (!V.resolving && c.loc >= 0 && revealed(uid)) {
         if (G.isProtected(uid)) el.classList.add('prot');
         if (d.kind === 'ongoing' && G.silenced(uid)) el.classList.add('muted');
@@ -158,10 +186,14 @@
     return el;
   }
 
+  // カードの種類（政治・文化・宗教・戦い・外交）
+  const TAGC = { '政治': 'sei', '文化': 'bun', '宗教': 'shu', '戦い': 'sen', '外交': 'gai' };
+  const tagRow = (d) => `<div class="tags">${d.tags.map(t => `<span class="tg tg-${TAGC[t] || 'x'}">${t}</span>`).join('')}</div>`;
+  const tagDots = (d) => `<div class="tdots">${d.tags.map(t => `<span class="tg tg-${TAGC[t] || 'x'}">${t[0]}</span>`).join('')}</div>`;
   function handInner(d, p, pc, cv, cc) {
     return `<div class="art${isFace(d) ? ' face' : ''}" style="background-image:url('${imgUrl(d)}')"></div><div class="frame"></div>
         <div class="cost${cc || ''}">${cv === undefined ? d.cost : cv}</div><div class="pow${pc || ''}">${p}</div><div class="lb lb-c">コスト</div><div class="lb lb-p">パワー</div>
-        <div class="nm fit">${d.name}</div><div class="kw kw-${d.kind}">${KW[d.kind]}</div>`;
+        <div class="nm fit">${d.name}</div><div class="kw kw-${d.kind}">${KW[d.kind]}</div>${tagRow(d)}`;
   }
   function renderTop() {
     const od = DECKS[cpuDeck];
@@ -268,7 +300,7 @@
     const p = pw(sel), cv = G.costOf(sel);
     D.innerHTML = `<div class="dt-art${isFace(d) ? ' face' : ''}" style="background-image:url('${imgUrl(d)}')"></div>
       <div class="dt-name fit">${d.name}</div>
-      <div class="dt-meta"><span class="m c">${cv}</span><span class="m p">${p}</span>${d.tags.map(t => `<span class="m tag">${t}</span>`).join('')}</div>
+      <div class="dt-meta"><span class="m c">${cv}</span><span class="m p">${p}</span>${d.tags.map(t => `<span class="m tag tg-${TAGC[t] || 'x'}">${t}</span>`).join('')}</div>
       <div class="dt-text fitb"><span class="kwl kw-${d.kind}">${KW[d.kind]}</span>${d.kind === 'none' ? '' : d.text}</div>
       <div class="dt-memo fitb">${d.memo}</div>
       ${pend ? `<div class="dt-btn"><button class="btn" data-act="unplay">手札にもどす</button></div>` : ''}`;
@@ -450,6 +482,7 @@
   async function endTurn() {
     if (busy) return;
     busy = true; sel = null; SE.play('decide');
+    if (RES) { const pl = (p) => G.S.pending[p].map(u => [u, G.S.cards[u].loc]); RES.turns.push({ p: pl(ME), q: pl(OP), d0: G.S.declaredBy === ME, d1: G.S.declaredBy === OP }); saveRes(); }
     // 相手の伏せカードを見せる
     const oppNew = G.S.pending[OP].slice();
     V.oppShown = true; renderAll();
@@ -755,7 +788,7 @@
     const decksWith = Object.values(DECKS).filter(x => x.cards.includes(c.id)).map(x => x.name);
     $('#zkInfo').innerHTML = `<div class="zi-art${isFace(c) ? ' face' : ''}" style="background-image:url('${imgUrl(c)}')"></div>
       <div class="zi-name fit">${c.name}</div>
-      <div class="zi-meta"><span class="m c">コスト ${c.cost}</span><span class="m p">パワー ${c.power}</span>${c.tags.map(t => `<span class="m tag">${t}</span>`).join('')}</div>
+      <div class="zi-meta"><span class="m c">コスト ${c.cost}</span><span class="m p">パワー ${c.power}</span>${c.tags.map(t => `<span class="m tag tg-${TAGC[t] || 'x'}">${t}</span>`).join('')}</div>
       <div class="zi-text fitb"><span class="kwl kw-${c.kind}">${KW[c.kind]}</span>${c.kind === 'none' ? '' : c.text}</div>
       <div class="zi-memo fitb">${c.memo}</div>
       <div class="zi-share fitb">${decksWith.length > 1 ? '共通カード：' + decksWith.join('・') + 'のデッキに入っている' : ''}</div>`;
@@ -764,7 +797,7 @@
   function openZukanDeck(id, from) { zk.from = from; zk.deck = Object.keys(DECKS).indexOf(id); zk.card = 0; show('zukan'); renderZukan(); }
 
   // ---------- モーダル ----------  // ---------- モーダル ----------
-  function openModal(html, redraw) { const M = $('#modal'); M.innerHTML = `<div class="shade"></div><div class="box panel">${html}</div>`; M.classList.add('on'); modalRedraw = redraw || null; fitAll(M); }
+  function openModal(html, redraw, cls) { const M = $('#modal'); M.innerHTML = `<div class="shade"></div><div class="box panel ${cls || ''}">${html}</div>`; M.classList.add('on'); modalRedraw = redraw || null; fitAll(M); }
   function closeModal() { const M = $('#modal'); M.classList.remove('on'); M.innerHTML = ''; modalRedraw = null; }
   function openConfirm(title, body, okLabel, onOk, color) {
     openModal(`<div class="mtitle">${title}</div><div class="mbody fitb" style="text-align:center">${body}</div>
@@ -782,22 +815,46 @@
       <div class="mbtns"><button class="btn gold" data-act="closeModal">つづける</button></div>`, openMenu);
     $('#mHow').onclick = () => openHowto(0, true);
     $('#mSet').onclick = () => openSettings(true);
-    $('#mTitle').onclick = () => openConfirm('タイトルにもどりますか？', 'この試合は記録されません。', 'もどる', () => { G = null; if (window.RC_TUTORIAL) RC_TUTORIAL.stop(); RC_META.toMenu(); });
+    $('#mTitle').onclick = () => openConfirm('タイトルにもどりますか？', 'この試合は放棄されます（★・コインは変わりません）。', 'もどる', () => quitGame());
   }
   let dbgTaps = 0;
+  // 全画面（PC・スマホ）
+  const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+  const fsOK = () => !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
+  function toggleFull() {
+    try {
+      if (fsEl()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      else (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen).call(document.documentElement);
+    } catch (e) {}
+  }
+  document.addEventListener('fullscreenchange', () => setTimeout(fitStage, 120));
+  document.addEventListener('webkitfullscreenchange', () => setTimeout(fitStage, 120));
   function openSettings(fromMenu) {
     const row = (id, label, on) => `<div class="setrow"><span>${label}</span><button class="btn ${on ? 'gold' : ''}" id="${id}">${on ? 'オン' : 'オフ'}</button></div>`;
+    const act = (id, label, b, cls) => `<div class="setrow"><span>${label}</span><button class="btn ${cls || ''}" id="${id}">${b}</button></div>`;
+    const rows = [row('sSnd', '効果音', SE.on), row('sBgm', 'BGM', RC_META.BGM.on), row('sLbl', '「コスト」「パワー」の文字', showLabels), row('s3d', '3D表示（重いときはオフ）', use3d)];
+    if (fsOK()) rows.push(act('sFull', '全画面表示', fsEl() ? 'もどす' : '全画面', fsEl() ? 'gold' : ''));
+    if (G) rows.push(act('sQuit', 'タイトル画面にもどる（試合は放棄）', 'もどる', 'red'));
+    else rows.push(act('sBg', 'メニューの背景', 'えらぶ'), act('sName', '名前：' + RC_META.playerName(), 'かえる'), act('sTut', 'チュートリアル（本じいの教え）', '見る'));
     openModal(`<div class="mtitle" id="sTitle">設定</div>
-      <div class="mbody setbody">${row('sSnd', '効果音', SE.on)}${row('sBgm', 'BGM', RC_META.BGM.on)}${row('sLbl', 'カードの「コスト」「パワー」表示', showLabels)}${row('s3d', '3D表示（重いときはオフ）', use3d)}${G ? '' : `<div class="setrow"><span>チュートリアル（本じいの教え）</span><button class="btn" id="sTut">見る</button></div>`}</div>
-      <div class="mbtns"><button class="btn gold" id="sBack">${fromMenu ? 'もどる' : 'とじる'}</button></div>`, () => openSettings(fromMenu));
+      <div class="mbody setbody${rows.length > 5 ? ' many' : ''}">${rows.join('')}</div>
+      <div class="mbtns"><button class="btn gold" id="sBack">${fromMenu ? 'もどる' : 'とじる'}</button></div>`, () => openSettings(fromMenu), rows.length > 5 ? 'big' : '');
     // 「設定」の文字を20回おすとデバッグモード
     $('#sTitle').onclick = () => { dbgTaps++; if (dbgTaps >= 20) { dbgTaps = 0; SE.play('decide'); RC_META.openDebug(); } };
     $('#sBgm').onclick = () => { RC_META.BGM.set(!RC_META.BGM.on); SE.play('tap'); openSettings(fromMenu); };
     $('#sSnd').onclick = () => { SE.on = !SE.on; store.set('sound', SE.on); SE.play('tap'); openSettings(fromMenu); };
     $('#s3d').onclick = () => { use3d = !use3d; store.set('d3', use3d); applyLabels(); SE.play('tap'); if (G) { renderAll(); camera(-1, 1, 1, 10); } openSettings(fromMenu); };
     $('#sLbl').onclick = () => { showLabels = !showLabels; store.set('labels', showLabels); applyLabels(); SE.play('tap'); openSettings(fromMenu); };
+    if ($('#sFull')) $('#sFull').onclick = () => { SE.play('tap'); toggleFull(); setTimeout(() => openSettings(fromMenu), 300); };
     if ($('#sTut')) $('#sTut').onclick = () => { SE.play('decide'); closeModal(); window.RC_TUTORIAL.start(null); };
+    if ($('#sBg')) $('#sBg').onclick = () => { SE.play('tap'); RC_META.openBgPicker(); };
+    if ($('#sName')) $('#sName').onclick = () => { SE.play('tap'); RC_META.openNameInput(() => openSettings(fromMenu)); };
+    if ($('#sQuit')) $('#sQuit').onclick = () => { SE.play('tap'); openConfirm('タイトル画面にもどりますか？', 'この試合は放棄されます（★・コインは変わりません）。<br>相手との通信が切れたときや、同期がずれたときに使ってください。', 'もどる', () => quitGame(), 'red'); };
     $('#sBack').onclick = () => { SE.play('tap'); if (fromMenu && G) openMenu(); else closeModal(); };
+  }
+  function quitGame() {
+    G = null; busy = false; if (window.RC_TUTORIAL) RC_TUTORIAL.stop();
+    clearResume(); if (window.RC_META) RC_META.toMenu();
   }
   function cardGuide() {
     const d = CARDS['kenpo'];
@@ -825,9 +882,38 @@
     if ($('#hClose')) $('#hClose').onclick = () => { SE.play('tap'); if (fromMenu && G) openMenu(); else closeModal(); };
   }
 
-  function showResult() {
-    busy = true; renderCtrl();
+  // 勝ったデッキの主役が話す
+  function pickLine(wDeck, lDeck, wp) {
+    const L = (window.RC_LINES || {})[wDeck] || []; if (!L.length) return null;
+    const order = Object.keys(DECKS), lp = 1 - wp, rnd = (a) => a[Math.floor(Math.random() * a.length)];
+    const won = [0, 1, 2].filter(li => G.total(li, wp) > G.total(li, lp)), diffs = won.map(li => G.total(li, wp) - G.total(li, lp));
+    const combo = Object.values(G.S.cards).some(c => c.owner === wp && c.loc >= 0 && c.comboShown);
+    const decl = G.S.declaredBy === wp && G.S.over.retreat === undefined;
+    const by = (k) => L.filter(x => x.k === k);
+    let c = L.filter(x => x.k === 'rival' && x.vs === lDeck);
+    if (!c.length) c = [].concat(decl ? by('decl') : [], combo ? by('combo') : [], diffs.length >= 2 && diffs.every(d => d >= 10) ? by('big') : [], diffs.some(d => d <= 2) ? by('close') : []);
+    if (!c.length) c = order.indexOf(lDeck) < order.indexOf(wDeck) ? by('old') : order.indexOf(lDeck) > order.indexOf(wDeck) ? by('new') : [];
+    if (!c.length || Math.random() < 0.25) c = c.concat(by('normal'));
+    return rnd(c.length ? c : L);
+  }
+  function victoryScene(wDeck, lDeck, wp) {
+    return new Promise(done => {
+      const ln = pickLine(wDeck, lDeck, wp); if (!ln) return done();
+      const d = DECKS[wDeck], spName = (window.RC_SPNAME || {})[ln.sp] || d.name, mine = wp === ME;
+      const el = document.createElement('div'); el.className = 'vscene ' + (mine ? 'me' : 'op'); el.style.setProperty('--dc', d.color);
+      el.innerHTML = `<div class="vs-rays"></div><div class="vs-tag">${mine ? 'あなたの勝ち' : (G.S.mode === 'friend' ? '相手の勝ち' : 'CPUの勝ち')}</div>
+        <div class="vs-port" style="background-image:url('img/vic/${ln.sp}.webp')"></div>
+        <div class="vs-bub"><div class="vs-nm">${spName}</div><div class="vs-t"></div></div><div class="vs-tap">タップしてつづける</div>`;
+      stage.appendChild(el); SE.play(mine ? 'cheer' : 'shock', 0.8); SE.whoosh();
+      const t = el.querySelector('.vs-t'); let n = 0; const chars = [...ln.t];
+      const iv = setInterval(() => { n++; t.textContent = chars.slice(0, n).join(''); if (n >= chars.length) clearInterval(iv); }, 45);
+      setTimeout(() => { el.onclick = () => { if (n < chars.length) { n = chars.length; t.textContent = ln.t; clearInterval(iv); return; } SE.play('tap'); el.classList.add('out'); setTimeout(() => { el.remove(); done(); }, 280); }; }, 600);
+    });
+  }
+  async function showResult() {
+    busy = true; renderCtrl(); clearResume();
     if (TUT()) return TUT().onEnd();
+    if (G.S.over.winner >= 0 && !(window.RC_META && RC_META.skipVictory)) { const wp = G.S.over.winner; await victoryScene(wp === ME ? myDeck : cpuDeck, wp === ME ? cpuDeck : myDeck, wp); }
     const r = G.S.over;
     const win = r.winner === ME, draw = r.winner < 0;
     const X = RC_META.applyResult(r, ME);
@@ -863,6 +949,6 @@
   window.addEventListener('resize', fitStage);
   stage.classList.add(layout); fitStage(); applyLabels();
   // テスト用（自動確認ツールから使う）と、meta.js から使う部品
-  window.RC_UI = { get G() { return G; }, newGame, endTurn, doPlay, action, get busy() { return busy; }, fast(v) { SPEED = v ? 0.03 : 1; }, get isFast() { return SPEED < 1; }, cardNode: (u) => cardNode(u), get sel() { return sel; },
+  window.RC_UI = { get G() { return G; }, newGame, endTurn, doPlay, action, get busy() { return busy; }, fast(v) { SPEED = v ? 0.03 : 1; }, resumeGame, clearResume, rebuild, get isFast() { return SPEED < 1; }, cardNode: (u) => cardNode(u), get sel() { return sel; },
     x: { showResult, store, SE, show, openModal, closeModal, openConfirm, fitAll, banner, sleep, setGame(v) { G = v; }, openZukanDeck, get layout() { return layout; } } };
 })();

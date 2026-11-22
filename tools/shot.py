@@ -5,7 +5,7 @@ from playwright.async_api import async_playwright
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 URL = 'file://' + ROOT + '/' + os.environ.get('RC_PAGE', 'index.html')
 OUT = '/tmp/shots'; os.makedirs(OUT, exist_ok=True)
-SIZES = [('pc', 1366, 768, False), ('phone', 412, 915, True), ('fold', 884, 1032, True), ('wide', 1920, 1080, False)]
+SIZES = [('pc', 1366, 768, False), ('phone', 412, 915, True), ('cover', 393, 873, True), ('fold', 884, 1032, True), ('wide', 1920, 1080, False)]
 CHECK = r'''() => {
   const st = document.getElementById('stage'); const sr = st.getBoundingClientRect();
   const bad = [];
@@ -33,10 +33,13 @@ CHECK = r'''() => {
     if (el.tagName !== 'SPAN' && !el.querySelector('span,small,b,i,div,img')) { const r = document.createRange(); r.selectNodeContents(el); if (r.getClientRects().length > 1 && r.getBoundingClientRect().height > lh * 1.6) bad.push('折り返し: ' + el.textContent.trim()); }
   });
   // ボタン・カードが画面外に出ていないか
-  document.querySelectorAll('.screen.on .btn, .screen.on .card, #modal.on .btn, .screen.on .tile, .screen.on .panel').forEach(el => {
-    if (!vis(el)) return; const r = el.getBoundingClientRect();
-    if (r.left < sr.left - 8 || r.top < sr.top - 8 || r.right > sr.right + 8 || r.bottom > sr.bottom + 8) bad.push('画面外: ' + el.className + ' ' + (el.textContent||'').trim().slice(0,10));
+  document.querySelectorAll('.screen.on .btn, .screen.on button, .screen.on .card, #modal.on .btn, .screen.on .tile, .screen.on .panel, #turnBox *, #oppBar *').forEach(el => {
+    if (!vis(el)) return; const r = el.getBoundingClientRect(); const tol = el.classList.contains('card') ? 8 : 1;
+    if (r.left < sr.left - tol || r.top < sr.top - tol || r.right > sr.right + tol || r.bottom > sr.bottom + tol) bad.push('画面外: ' + el.className + ' ' + (el.textContent||'').trim().slice(0,10));
   });
+  // 上の枠からはみ出した中身
+  ['#turnBox', '#oppBar'].forEach(q => { const p = document.querySelector(q); if (!p || !vis(p)) return; const pr = p.getBoundingClientRect();
+    p.querySelectorAll('*').forEach(c => { if (!vis(c)) return; const r = c.getBoundingClientRect(); if (r.right > pr.right + 1 || r.left < pr.left - 1) bad.push('枠からはみ出し: ' + q + ' ' + (c.className || c.tagName)); }); });
   // 手札・盤面カードのかぶり
   const cs = Array.from(document.querySelectorAll('#hand .card'));
   for (let i = 0; i < cs.length; i++) for (let j = i + 1; j < cs.length; j++) {

@@ -208,7 +208,7 @@ button { font-family: inherit; font-weight: 900; color: inherit; border: 0; back
 .back { background: radial-gradient(circle at 50% 45%, #4a2f86 0, #1a1036 60%), #1a1036; }
 .back::before { content: ''; position: absolute; inset: 4px; border-radius: 5px; border: 1px solid rgba(232,195,106,.6);
   background: repeating-conic-gradient(from 0deg, rgba(232,195,106,.08) 0 10deg, transparent 10deg 20deg); }
-.back::after { content: '史'; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--gold);
+.back::after { content: '歴'; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--gold);
   display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900; color: var(--gold); text-shadow: 0 0 8px rgba(232,195,106,.8); background: rgba(10,6,20,.7); }
 .bc.flipin { animation: cardFlip .5s cubic-bezier(.2,.8,.2,1) both; }
 @keyframes cardFlip { 0% { transform: perspective(500px) rotateY(90deg) scale(1.15); filter: brightness(2.5); } 70% { transform: perspective(500px) rotateY(-6deg) scale(1.06); } 100% { transform: none; filter: none; } }
@@ -862,3 +862,121 @@ button { font-family: inherit; font-weight: 900; color: inherit; border: 0; back
 .port #tut .tut-foot { min-height: 38px; } .port #tut .tut-foot .btn { height: 38px; min-width: 120px; font-size: 15px; }
 .port #tut .tut-hint { height: 34px; line-height: 34px; font-size: 14px; }
 .port #tut .tut-name { font-size: 13px; } .port #tut .tut-skip { height: 26px; min-width: 80px; font-size: 12px; }
+
+/* ===== v0.6 カードの種類タグ ===== */
+.tg-sei { --tg: #3b6fd1; } .tg-bun { --tg: #d1862c; } .tg-shu { --tg: #8e5bd6; } .tg-sen { --tg: #c8443c; } .tg-gai { --tg: #23969c; } .tg-x { --tg: #666; }
+.card .tags { position: absolute; left: 4px; right: 4px; display: flex; justify-content: center; gap: 3px; }
+.card .tags .tg { padding: 0 5px; border-radius: 4px; background: var(--tg); color: #fff; font-weight: 900; white-space: nowrap; }
+.land .hc { height: 168px; } .land .hc .tags { top: 143px; } .land .hc .tags .tg { font-size: 11px; height: 18px; line-height: 18px; }
+.port .hc { height: 126px; } .port .hc .art { height: 64px; } .port .hc .nm { top: 69px; } .port .hc .kw { top: 88px; }
+.port .hc .tags { top: 107px; } .port .hc .tags .tg { font-size: 10px; height: 15px; line-height: 15px; padding: 0 4px; }
+.port #hand { top: 698px; height: 262px; grid-auto-rows: 126px; }
+.bc .tdots { position: absolute; left: 3px; top: 33px; display: flex; gap: 2px; z-index: 2; }
+.bc .tdots .tg { width: 14px; height: 14px; line-height: 14px; border-radius: 3px; background: var(--tg); color: #fff; font-size: 9px; font-weight: 900; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,.6); }
+.port .bc .tdots { top: 31px; }
+.m.tag[class*="tg-"] { background: var(--tg) !important; color: #fff !important; border-color: transparent !important; }
+.port #turnBox { gap: 6px; padding: 0 4px 0 10px; } .port #turnBox .tn { font-size: 18px; } .port #turnBox .tn small { font-size: 12px; } .port #turnBox .stk { font-size: 13px; }
+.port #turnBox .stk { display: none; }
+
+/* ===== v0.6 デッキケース ===== */
+.land .deck-list { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
+.port .deck-list { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.dcase { position: relative; border-radius: 12px; cursor: pointer; --c: #8a6a2a;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--c) 80%, #fff 20%), var(--c) 42%, color-mix(in srgb, var(--c) 50%, #000 50%));
+  box-shadow: 0 10px 20px rgba(0,0,0,.6), inset 0 0 0 2px rgba(255,255,255,.22), inset 0 -40px 60px rgba(0,0,0,.35); transition: transform .15s, box-shadow .15s; }
+.dcase::before { content: ''; position: absolute; left: 0; right: 0; height: 3px; background: rgba(0,0,0,.35); box-shadow: 0 1px 0 rgba(255,255,255,.25); }
+.dcase::after { content: ''; position: absolute; inset: 7px; border-radius: 8px; border: 2px solid rgba(255,220,140,.7); pointer-events: none;
+  background: repeating-linear-gradient(45deg, rgba(255,255,255,.04) 0 6px, transparent 6px 12px); }
+.dcase:hover { transform: translateY(-4px); box-shadow: 0 0 0 2px var(--gold3), 0 0 24px rgba(232,195,106,.5), 0 10px 20px rgba(0,0,0,.6); }
+.dcase > div { position: absolute; z-index: 2; }
+.dc-era { font-weight: 900; border-radius: 10px; background: rgba(0,0,0,.45); border: 1px solid #e8c36a; color: #ffe7a3; white-space: nowrap; }
+.dc-clasp { border-radius: 50%; border: 2px solid #e8c36a; background: radial-gradient(circle, #e8c36a 30%, transparent 32%); }
+.dc-face { left: 50%; border-radius: 50%; background: #14112a center 30%/cover no-repeat; box-shadow: 0 0 0 3px #e8c36a, 0 0 0 6px rgba(0,0,0,.5), 0 6px 14px rgba(0,0,0,.6); }
+.dc-nm { left: 10px; right: 10px; text-align: center; font-weight: 900; white-space: nowrap; overflow: hidden; text-shadow: 0 2px 0 rgba(0,0,0,.6); }
+.dc-th { left: 10px; right: 10px; text-align: center; color: #ffe7a3; white-space: nowrap; overflow: hidden; }
+.dc-ds { left: 14px; right: 14px; text-align: center; color: rgba(255,255,255,.85); line-height: 1.35; overflow: hidden; }
+.land .dcase { height: 250px; } .land .dcase::before { top: 40px; }
+.land .dc-era { left: 14px; top: 12px; font-size: 12px; padding: 1px 9px; } .land .dc-clasp { right: 14px; top: 11px; width: 20px; height: 20px; }
+.land .dc-face { top: 54px; width: 96px; height: 96px; margin-left: -48px; }
+.land .dc-nm { top: 160px; font-size: 18px; height: 26px; line-height: 26px; } .land .dc-th { top: 186px; font-size: 13px; height: 18px; line-height: 18px; }
+.land .dc-ds { top: 206px; height: 34px; font-size: 11px; }
+.port .dcase { height: 196px; } .port .dcase::before { top: 34px; }
+.port .dc-era { left: 10px; top: 10px; font-size: 11px; padding: 0 7px; } .port .dc-clasp { right: 10px; top: 9px; width: 17px; height: 17px; }
+.port .dc-face { top: 44px; width: 74px; height: 74px; margin-left: -37px; }
+.port .dc-nm { top: 126px; font-size: 15px; height: 22px; line-height: 22px; } .port .dc-th { top: 148px; font-size: 11px; height: 16px; line-height: 16px; }
+.port .dc-ds { top: 166px; height: 22px; font-size: 9.5px; left: 10px; right: 10px; }
+.dcase.locked { filter: grayscale(1) brightness(.5); }
+.dcase.locked .dc-face { filter: brightness(0) drop-shadow(0 0 1px rgba(232,195,106,.8)); background-color: transparent; }
+/* v0.6 設定：行が多いとき */
+.land .setbody.many { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 50px; gap: 8px 12px; align-content: start; }
+.port .setbody.many { gap: 6px; } .port .setbody.many .setrow { height: 50px; }
+.setrow span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ===== v0.6 名前入力 ===== */
+.land #modal .box.big { width: 900px; height: 620px; } .port #modal .box.big { width: 464px; height: 800px; }
+.land .box.big .mbody { height: 440px; } .port .box.big .mbody { height: 560px; }
+.namebody { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.nm-row { display: flex; align-items: center; gap: 12px; }
+.nm-in { width: 380px; height: 52px; border-radius: 10px; border: 2px solid var(--gold); background: #0e0b1e; color: #fff; font-size: 26px; font-weight: 900; text-align: center; font-family: inherit; outline: none; touch-action: manipulation; }
+.nm-in:focus { box-shadow: 0 0 0 3px rgba(232,195,106,.35); }
+.nm-cnt { font-size: 16px; color: var(--ink2); width: 52px; }
+.nm-msg { font-size: 14px; line-height: 22px; height: 22px; color: var(--ink2); text-align: center; white-space: nowrap; }
+.kbd { display: flex; gap: 6px; flex-direction: row; }
+.kcol { display: flex; flex-direction: column; gap: 6px; }
+.kcol i { display: block; }
+.kk { border-radius: 8px; border: 1px solid rgba(232,195,106,.55); background: linear-gradient(180deg, #2b2448, #1a1530); color: #fff; font-weight: 900; font-family: inherit; cursor: pointer; padding: 0; }
+.kk:active { background: #4a3d7a; }
+.kcol.sp .kk { background: linear-gradient(180deg, #3a2f18, #241c0c); color: var(--gold3); } .kk.del { background: linear-gradient(180deg, #5a1e2a, #3a1018) !important; color: #fff !important; }
+.land .kk, .land .kcol i { width: 62px; height: 60px; font-size: 24px; }
+.land .kcol.sp .kk { font-size: 20px; }
+.port .nm-in { width: 300px; height: 48px; font-size: 22px; } .port .nm-msg { font-size: 11px; white-space: normal; height: 32px; line-height: 16px; }
+.port .kbd { gap: 3px; } .port .kcol { gap: 4px; }
+.port .kk, .port .kcol i { width: 34px; height: 56px; font-size: 18px; } .port .kcol.sp .kk { font-size: 13px; }
+.port .kk.del { font-size: 12px !important; }
+/* 名前の表示（メニュー） */
+.name-plate { position: absolute; display: flex; align-items: center; gap: 10px; padding: 0 16px; border-radius: 30px; background: var(--panel); border: 1px solid rgba(232,195,106,.5); box-shadow: 0 6px 14px rgba(0,0,0,.5); }
+.name-plate small { font-size: 12px; color: var(--ink2); } .name-plate b { font-size: 20px; color: #fff; white-space: nowrap; }
+.land .tt-menu .name-plate { right: 210px; top: 22px; height: 56px; }
+.port .tt-menu .name-plate { left: 16px; top: 140px; height: 52px; width: 222px; }
+/* 背景えらび */
+.bgpick { display: grid; gap: 12px; align-content: center; }
+.land .bgpick { grid-template-columns: repeat(3, minmax(0, 1fr)); } .port .bgpick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.bgp { position: relative; border-radius: 10px; border: 2px solid rgba(232,195,106,.35); background: #120e24; padding: 0; cursor: pointer; overflow: hidden; font-family: inherit; color: #fff; }
+.bgp.on { border-color: var(--gold3); box-shadow: 0 0 0 2px var(--gold3), 0 0 18px rgba(255,214,120,.7); }
+.bp-img { width: 100%; aspect-ratio: 16 / 9; background: center/cover no-repeat; }
+.bp-nm { height: 26px; line-height: 26px; font-size: 14px; font-weight: 900; white-space: nowrap; }
+.bgp.on .bp-nm::after { content: '　使用中'; color: var(--gold3); }
+.pgno { align-self: center; font-size: 16px; color: var(--ink2); white-space: nowrap; }
+/* デッキ入手のとき：背景プレゼント */
+.gf-bg { display: flex; align-items: center; gap: 14px; margin-top: 14px; padding: 10px 16px; border-radius: 12px; background: rgba(0,0,0,.45); border: 1px solid rgba(232,195,106,.6); animation: fadeIn .5s ease 1s both; }
+.gf-bg .gb-img { width: 192px; height: 108px; border-radius: 8px; background: center/cover; box-shadow: 0 0 0 2px #e8c36a; }
+.gf-bg .gb-t { font-size: 18px; font-weight: 900; color: #ffe7a3; } .gf-bg .gb-t small { display: block; font-size: 13px; font-weight: 400; color: #fff; margin-top: 4px; }
+.port .gf-bg { flex-direction: column; gap: 8px; } .port .gf-bg .gb-img { width: 240px; height: 135px; } .port .gf-bg .gb-t { text-align: center; font-size: 16px; }
+
+/* ===== v0.6 勝利セリフ ===== */
+.vscene { position: absolute; inset: 0; z-index: 70; cursor: pointer; overflow: hidden; animation: fadeIn .3s both;
+  background: radial-gradient(ellipse at 30% 55%, color-mix(in srgb, var(--dc) 55%, transparent), rgba(6,4,14,.94) 62%); }
+.vscene.out { animation: fadeOut .28s both; }
+.vs-rays { position: absolute; left: 30%; top: 55%; width: 1800px; height: 1800px; margin: -900px; opacity: .25;
+  background: repeating-conic-gradient(rgba(255,231,163,.7) 0 6deg, transparent 6deg 18deg); animation: spin 30s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.vs-tag { position: absolute; font-weight: 900; letter-spacing: .2em; color: #fff; background: linear-gradient(90deg, transparent, var(--dc), transparent); text-align: center; animation: vsTag .6s cubic-bezier(.2,1.4,.4,1) both; }
+.vscene.me .vs-tag { color: #ffe7a3; text-shadow: 0 0 12px rgba(255,214,120,.9); }
+@keyframes vsTag { from { transform: scale(2); opacity: 0; } }
+.vs-port { position: absolute; background: center bottom/contain no-repeat; filter: drop-shadow(0 0 24px rgba(0,0,0,.8)); animation: vsPort .7s cubic-bezier(.2,.9,.2,1) .1s both; }
+@keyframes vsPort { from { transform: translateX(-120px); opacity: 0; } }
+.vs-bub { position: absolute; border-radius: 18px; background: rgba(250,246,236,.97); color: #1b1530; box-shadow: 0 10px 30px rgba(0,0,0,.6); border: 3px solid var(--dc); animation: vsBub .5s cubic-bezier(.2,1.4,.4,1) .35s both; }
+@keyframes vsBub { from { transform: scale(.6); opacity: 0; } }
+.vs-nm { position: absolute; left: 18px; top: -18px; padding: 2px 16px; border-radius: 8px; background: var(--dc); color: #fff; font-weight: 900; white-space: nowrap; box-shadow: 0 3px 8px rgba(0,0,0,.5); }
+.vs-t { font-weight: 900; line-height: 1.6; }
+.vs-tap { position: absolute; left: 0; right: 0; bottom: 18px; text-align: center; color: #fff; font-size: 15px; animation: tutBlink 1.2s ease-in-out infinite; }
+.land .vs-tag { left: 0; right: 0; top: 40px; font-size: 40px; height: 64px; line-height: 64px; }
+.land .vs-port { left: 60px; bottom: 0; width: 520px; height: 560px; }
+.land .vs-bub { left: 600px; right: 60px; top: 260px; min-height: 160px; padding: 34px 30px 24px; } .land .vs-nm { font-size: 20px; } .land .vs-t { font-size: 28px; }
+.land .vs-bub::before { content: ''; position: absolute; left: -26px; top: 60px; border: 14px solid transparent; border-right: 14px solid var(--dc); }
+.port .vs-tag { left: 0; right: 0; top: 40px; font-size: 30px; height: 52px; line-height: 52px; }
+.port .vs-port { left: 0; right: 0; top: 110px; height: 440px; }
+.port .vs-bub { left: 24px; right: 24px; top: 570px; min-height: 180px; padding: 30px 22px 20px; } .port .vs-nm { font-size: 17px; } .port .vs-t { font-size: 22px; }
+.port .vs-bub::before { content: ''; position: absolute; left: 50%; top: -26px; margin-left: -14px; border: 14px solid transparent; border-bottom: 14px solid var(--dc); }
+.setrow .btn { flex: none; min-width: 100px; white-space: nowrap; }
+.port .setrow span { font-size: 13px; }

@@ -236,7 +236,7 @@
     start(cb) {
       build(); onDone = cb; T.active = true; boxPos = '';
       cancelAnimationFrame(raf); loop();
-      window.RC_UI.newGame('himiko', { cpu: 'taishi', seed: 7, fixed: FIXED });
+      window.RC_UI.newGame('himiko', { cpu: 'taishi', seed: 7, fixed: FIXED, tut: true, mode: 'tut' });
     },
     stop,
     cpu(g, p) {

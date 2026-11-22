@@ -44,7 +44,8 @@
   function rankOf(st) { let r = RANKS[0]; RANKS.forEach(x => { if (st >= x[0]) r = x; }); return r; }
   function rankIdx(st) { let k = 0; RANKS.forEach((x, i) => { if (st >= x[0]) k = i; }); return k; }
   let showLabels = store.get('labels', true);
-  function applyLabels() { stage.classList.toggle('lbl', showLabels); }
+  let use3d = store.get('d3', true);
+  function applyLabels() { stage.classList.toggle('lbl', showLabels); stage.classList.toggle('d3', use3d); }
 
   // ---------- 画面サイズ ----------
   let layout = 'land', scale = 1;
@@ -55,7 +56,7 @@
     scale = Math.min(w / W, h / H);
     stage.style.width = W + 'px'; stage.style.height = H + 'px';
     stage.style.transform = `translate(${(w - W * scale) / 2}px, ${(h - H * scale) / 2}px) scale(${scale})`;
-    if (nl !== layout) { layout = nl; stage.className = layout; applyLabels(); if (G) renderAll(); fitAll(); if ($('#modal').classList.contains('on') && modalRedraw) modalRedraw(); }
+    if (nl !== layout) { layout = nl; stage.classList.remove('land', 'port'); stage.classList.add(layout); if (G) renderAll(); fitAll(); if ($('#modal').classList.contains('on') && modalRedraw) modalRedraw(); }
   }
   function rectS(el) {
     const r = el.getBoundingClientRect(), s = stage.getBoundingClientRect();
@@ -121,7 +122,7 @@
     G = E.create({ seed: (Math.random() * 1e9) | 0, decks: [myDeck, cpuDeck] });
     V = { resolving: false, rev: new Set(), snap: G.snap(), hide: new Set(), oppShown: false, locShown: [false, false, false] };
     log = { combos: [] }; sel = null; busy = true;
-    show('game'); renderAll();
+    show('game'); renderAll(); camera(-1, 1, 1, 10);
     setTimeout(nextTurn, 500);
   }
 
@@ -217,6 +218,7 @@
       if (CARDS[G.S.cards[uid].id].cost > left || busy) el.classList.add('poor');
       if (sel === uid) el.classList.add('sel');
       if (newOnes && newOnes.includes(uid)) el.classList.add('newdraw');
+      if (layout === 'land' && use3d) { const k = hand.indexOf(uid) - (hand.length - 1) / 2; el.style.setProperty('--fr', (k * 1.5) + 'deg'); el.style.setProperty('--fy', (k * k * 1.6) + 'px'); }
       H.appendChild(el);
     });
     if (!hand.length) H.innerHTML = '<div class="hand-empty">手札がありません</div>';
@@ -280,8 +282,8 @@
 
   // ---------- FLIP（カードがなめらかに移動）----------
   function grabRects() { const m = {}; $$('#board [data-uid], #hand [data-uid]').forEach(el => m[el.dataset.uid] = rectS(el)); return m; }
-  function flipFrom(old, dur) {
-    $$('#board [data-uid], #hand [data-uid]').forEach(el => {
+  function flipFrom(old, dur, sel) {
+    $$(sel || '#board [data-uid], #hand [data-uid]').forEach(el => {
       const a = old[el.dataset.uid]; if (!a) return;
       const b = rectS(el); if (!b.w) return;
       const dx = a.x - b.x, dy = a.y - b.y, sx = a.w / b.w, sy = a.h / b.h;
@@ -289,6 +291,35 @@
       el.animate([{ transform: `translate(${dx}px,${dy}px) scale(${sx},${sy})`, transformOrigin: '0 0' }, { transform: 'none', transformOrigin: '0 0' }],
         { duration: dur || 320, easing: 'cubic-bezier(.2,.8,.2,1)' });
     });
+  }
+
+  // ---------- カメラ（疑似3D）----------
+  // li：寄る場所（-1で全体）、z：寄りぐあい、tilt：傾きの倍率
+  function camera(li, z, tilt, dur) {
+    const B = $('#board'); if (!B) return Promise.resolve();
+    if (!use3d) { B.style.removeProperty('--cx'); B.style.removeProperty('--cz'); B.style.removeProperty('--tilt'); return Promise.resolve(); }
+    let cx = 0;
+    if (li >= 0) { const col = B.children[li]; if (col) cx = (B.offsetWidth / 2 - (col.offsetLeft + col.offsetWidth / 2)) * 0.6; }
+    B.style.setProperty('--dur', (dur || 500) + 'ms');
+    B.style.setProperty('--cx', cx + 'px'); B.style.setProperty('--cz', z || 1); B.style.setProperty('--tilt', tilt === undefined ? 1 : tilt);
+    return sleep(dur || 500);
+  }
+  function cameraReset(dur) { return camera(-1, 1, 1, dur || 400); }
+
+  // カードを手札から盤面へ、弧をえがいて飛ばす
+  function flyCard(uid, from, toEl, done) {
+    const fly = cardEl(uid, 'hand'); fly.classList.add('ghost', 'flying'); fly.classList.remove('poor', 'sel', 'newdraw');
+    FX.appendChild(fly); fitAll(fly);
+    const w = fly.offsetWidth, h = fly.offsetHeight, to = rectS(toEl);
+    const mx = (from.x + to.x) / 2, my = Math.min(from.y, to.y) - 70;
+    toEl.style.visibility = 'hidden';
+    const a = fly.animate([
+      { transform: `translate(${from.x}px,${from.y}px) scale(${from.w / w},${from.h / h}) rotate(0deg)` },
+      { transform: `translate(${mx}px,${my}px) scale(${(from.w / w + to.w / w) / 2 * 1.1}) rotate(${to.x > from.x ? 8 : -8}deg)`, offset: .5 },
+      { transform: `translate(${to.x}px,${to.y}px) scale(${to.w / w},${to.h / h}) rotate(0deg)` }],
+      { duration: 340, easing: 'cubic-bezier(.3,.6,.3,1)', fill: 'forwards' });
+    fly.style.transformOrigin = '0 0';
+    a.onfinish = () => { fly.remove(); toEl.style.visibility = ''; done && done(); };
   }
 
   // ---------- 演出パーツ ----------
@@ -342,14 +373,16 @@
     draws.forEach(e => V.hide.add(e.uid));
     V.snap = G.snap(); renderAll();
     for (const e of ev) {
-      if (e.t === 'turn') { SE.whoosh(); await banner('ターン ' + e.turn, e.turn === 6 ? '最終ターン' : 'エネルギー ' + e.turn, '', 750); }
+      if (e.t === 'turn') { SE.whoosh(); camera(-1, 1.04, 1, 600); await banner('ターン ' + e.turn, e.turn === 6 ? '最終ターン' : 'エネルギー ' + e.turn, '', 750); }
       else if (e.t === 'locReveal') {
+        await camera(e.li, 1.12, 0.85, 450);
         V.locShown[e.li] = true; renderBoard();
         const tile = $(`#board .loc[data-li="${e.li}"] .tile`); tile.classList.add('flipin'); SE.whoosh(true); SE.play('decide');
-        const c = centerOf(tile); setTimeout(() => { ring(c.x, c.y); sparks(c.x, c.y, 14); }, 250);
+        setTimeout(() => { const c = centerOf(tile); ring(c.x, c.y); sparks(c.x, c.y, 14); }, 250);
         await sleep(850);
       }
     }
+    await cameraReset(350);
     draws.filter(e => e.p === OP).forEach(e => V.hide.delete(e.uid));
     const mine = draws.filter(e => e.p === ME).map(e => e.uid);
     mine.forEach(u => V.hide.delete(u));
@@ -359,7 +392,7 @@
     E.cpuPlan(G, OP);
     const dc = E.cpuDecide(G, OP);
     if (dc === 'declare' && G.declare(OP)) { SE.play('shock'); await banner('天下取り宣言', '相手が勝負に出た！ 勝ち負けの★が±4に。撤退（★-1）は3ターン目まで', '', 1600); }
-    else if (dc === 'retreat') { G.retreat(OP); renderAll(); return showResult(); }
+    else if (dc === 'retreat') { G.retreat(OP); renderAll(); camera(-1, 0.96, 0.45, 900); return showResult(); }
     busy = false; V.snap = G.snap(); renderAll();
   }
 
@@ -387,6 +420,7 @@
       if (e.t === 'revealStart') {
         await banner(e.first === ME ? 'あなたから公開' : '相手から公開', 'リードしているほうが先に公開', '', 700);
       } else if (e.t === 'reveal') {
+        if (e.li !== V.camLi) { V.camLi = e.li; await camera(e.li, 1.06, 0.92, 260); }
         V.rev.add(e.uid); V.snap = e.snap; renderBoardCounting();
         const el = cardNode(e.uid);
         if (el) { el.classList.add('flipin'); const c = centerOf(el); setTimeout(() => { ring(c.x, c.y, e.p === ME ? 'blue' : 'red'); }, 120); }
@@ -424,6 +458,7 @@
         if (src) { const c = centerOf(src); floatText(c.x, c.y - 30, CARDS[G.S.cards[e.uid].id].name + 'を手札に', 'info'); }
         SE.play('good', 0.8); await sleep(800);
       } else if (e.t === 'combo') {
+        V.camLi = G.S.cards[e.uid].loc; await camera(V.camLi, 1.14, 0.85, 320);
         V.comboDone.add(e.uid); V.snap = e.snap; renderBoardCounting();
         const d = CARDS[G.S.cards[e.uid].id], pd = CARDS[G.S.cards[e.partner].id];
         [e.uid, e.partner].forEach(u => { const el = cardNode(u); if (el) { const c = centerOf(el); ring(c.x, c.y); sparks(c.x, c.y, 16); } });
@@ -440,9 +475,10 @@
         await sleep(950);
       }
     }
+    V.camLi = -1; await cameraReset(350);
     V.resolving = false; V.oppShown = false; V.hide.clear(); V.goneShow = new Map();
     V.snap = G.snap(); renderAll();
-    if (G.S.over) { await sleep(400); return showResult(); }
+    if (G.S.over) { camera(-1, 0.96, 0.45, 900); await sleep(700); return showResult(); }
     await sleep(250);
     nextTurn();
   }
@@ -464,13 +500,14 @@
       const col = $(`#board .loc[data-li="${li}"] .tile`); if (col) { const c = centerOf(col); floatText(c.x, c.y, msg, 'info'); }
       return false;
     }
-    const old = grabRects(); if (fromRect) old[uid] = fromRect;
+    const old = grabRects(); const from = fromRect || old[uid];
     G.play(ME, uid, li);
     sel = null; V.snap = G.snap();
     renderBoard(); renderHand(); renderCtrl(); renderDetail();
-    flipFrom(old, 260);
+    flipFrom(old, 260, '#hand [data-uid]');
     const el = cardNode(uid);
-    if (el) { setTimeout(() => { el.classList.add('slam'); const c = centerOf(el); ring(c.x, c.y, 'blue'); sparks(c.x, c.y, 8); }, 230); }
+    const land = () => { el.classList.add('slam'); const c = centerOf(el); ring(c.x, c.y, 'blue'); sparks(c.x, c.y, 8); SE.whoosh(); };
+    if (el && from) flyCard(uid, from, el, land); else if (el) land();
     const orb = $('#ctrl .orb'); if (orb && !was) orb.classList.add('bump');
     SE.play('decide', 0.8);
     return true;
@@ -588,7 +625,7 @@
       case 'declare':
         if (!busy && G.canDeclare(ME)) openConfirm('天下取り宣言しますか？', '勝てば<b>★+4</b>、負ければ<b>★-4</b>になります。<br>宣言すると、この試合ではもう撤退できません。', '宣言する', () => { G.declare(ME); SE.play('cheer'); renderAll(); banner('天下取り宣言', '勝てば★+4！ もう逃げない', '', 1100); }, 'blue');
         break;
-      case 'retreat': if (!busy && G.canRetreat(ME)) openConfirm('撤退しますか？', '<b>★-1</b>だけ負けて、この試合を終わります。<br>（ふつうに負けると★-2、宣言されて負けると★-4）', '撤退する', () => { G.retreat(ME); SE.play('ko'); renderAll(); showResult(); }); break;
+      case 'retreat': if (!busy && G.canRetreat(ME)) openConfirm('撤退しますか？', '<b>★-1</b>だけ負けて、この試合を終わります。<br>（ふつうに負けると★-2、宣言されて負けると★-4）', '撤退する', () => { G.retreat(ME); SE.play('ko'); renderAll(); camera(-1, 0.96, 0.45, 900); showResult(); }); break;
       case 'menu': openMenu(); break;
       case 'closeModal': SE.play('tap'); closeModal(); break;
       case 'again': SE.play('decide'); closeModal(); newGame(myDeck); break;
@@ -629,9 +666,10 @@
   function openSettings(fromMenu) {
     const row = (id, label, on) => `<div class="setrow"><span>${label}</span><button class="btn ${on ? 'gold' : ''}" id="${id}">${on ? 'オン' : 'オフ'}</button></div>`;
     openModal(`<div class="mtitle">設定</div>
-      <div class="mbody setbody">${row('sSnd', '音', SE.on)}${row('sLbl', 'カードの「コスト」「パワー」の文字', showLabels)}</div>
+      <div class="mbody setbody">${row('sSnd', '音', SE.on)}${row('sLbl', 'カードの「コスト」「パワー」の文字', showLabels)}${row('s3d', '3D表示（重いときはオフ）', use3d)}</div>
       <div class="mbtns"><button class="btn gold" id="sBack">${fromMenu ? 'もどる' : 'とじる'}</button></div>`, () => openSettings(fromMenu));
     $('#sSnd').onclick = () => { SE.on = !SE.on; store.set('sound', SE.on); SE.play('tap'); openSettings(fromMenu); };
+    $('#s3d').onclick = () => { use3d = !use3d; store.set('d3', use3d); applyLabels(); SE.play('tap'); if (G) { renderAll(); camera(-1, 1, 1, 10); } openSettings(fromMenu); };
     $('#sLbl').onclick = () => { showLabels = !showLabels; store.set('labels', showLabels); applyLabels(); SE.play('tap'); openSettings(fromMenu); };
     $('#sBack').onclick = () => { SE.play('tap'); if (fromMenu && G) openMenu(); else closeModal(); };
   }
@@ -700,8 +738,7 @@
   // ---------- 開始 ----------
   applyLabels();
   window.addEventListener('resize', fitStage);
-  stage.className = layout; fitStage();
-  if (layout !== stage.className) stage.className = layout;
+  stage.classList.add(layout); fitStage(); applyLabels();
   show('title');
   // テスト用（自動確認ツールから使う）
   window.RC_UI = { get G() { return G; }, newGame, endTurn, doPlay, action, get busy() { return busy; } };
